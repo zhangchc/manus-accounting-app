@@ -9558,9 +9558,9 @@ internalMixin(Vue);
 
 /***/ }),
 /* 26 */
-/*!********************************************************************************************!*\
-  !*** /Users/zhangchuancun/Downloads/jizhangxiaochengxu/accounting-app/frontend/pages.json ***!
-  \********************************************************************************************/
+/*!*********************************************************************!*\
+  !*** /Users/zhangchuancun/manus-accounting-app/frontend/pages.json ***!
+  \*********************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -10084,9 +10084,9 @@ module.exports = _asyncToGenerator, module.exports.__esModule = true, module.exp
 
 /***/ }),
 /* 42 */
-/*!**********************************************************************************************!*\
-  !*** /Users/zhangchuancun/Downloads/jizhangxiaochengxu/accounting-app/frontend/api/index.js ***!
-  \**********************************************************************************************/
+/*!***********************************************************************!*\
+  !*** /Users/zhangchuancun/manus-accounting-app/frontend/api/index.js ***!
+  \***********************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -10202,9 +10202,9 @@ exports.getMonthBudgets = getMonthBudgets;
 
 /***/ }),
 /* 43 */
-/*!**************************************************************************************************!*\
-  !*** /Users/zhangchuancun/Downloads/jizhangxiaochengxu/accounting-app/frontend/utils/request.js ***!
-  \**************************************************************************************************/
+/*!***************************************************************************!*\
+  !*** /Users/zhangchuancun/manus-accounting-app/frontend/utils/request.js ***!
+  \***************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -10303,9 +10303,9 @@ exports.default = _default;
 
 /***/ }),
 /* 44 */
-/*!***********************************************************************************************!*\
-  !*** /Users/zhangchuancun/Downloads/jizhangxiaochengxu/accounting-app/frontend/utils/util.js ***!
-  \***********************************************************************************************/
+/*!************************************************************************!*\
+  !*** /Users/zhangchuancun/manus-accounting-app/frontend/utils/util.js ***!
+  \************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
