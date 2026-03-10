@@ -1,0 +1,45 @@
+{
+    "name" : "轻记账",
+    "appid" : "__UNI__ACCOUNTING",
+    "description" : "简约清爽的记账小程序",
+    "versionName" : "1.0.0",
+    "versionCode" : "100",
+    "transformPx" : false,
+    "app-plus" : {
+        "usingComponents" : true,
+        "splashscreen" : {
+            "alwaysShowBeforeRender" : true,
+            "waiting" : true,
+            "autoclose" : true,
+            "delay" : 0
+        }
+    },
+    "mp-weixin" : {
+        "appid" : "wx159e46d91d603ac7",
+        "setting" : {
+            "urlCheck" : false,
+            "es6" : true,
+            "postcss" : true,
+            "minified" : true
+        },
+        "usingComponents" : true,
+        "permission" : {},
+        "optimization" : {
+            "subPackages" : true
+        }
+    },
+    "h5" : {
+        "devServer" : {
+            "port" : 8081,
+            "disableHostCheck" : true,
+            "proxy" : {
+                "/api" : {
+                    "target" : "http://localhost:8080",
+                    "changeOrigin" : true,
+                    "secure" : false
+                }
+            }
+        },
+        "title" : "轻记账"
+    }
+}

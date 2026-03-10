@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.accounting.mapper.RecordMapper">
+
+    <!-- 查询记录列表（关联分类信息） -->
+    <select id="selectRecordList" resultType="com.accounting.vo.RecordVO">
+        SELECT
+            r.id,
+            r.book_id AS bookId,
+            r.category_id AS categoryId,
+            c.name AS categoryName,
+            c.icon AS categoryIcon,
+            r.type,
+            r.amount,
+            r.remark,
+            DATE_FORMAT(r.record_date, '%Y-%m-%d') AS recordDate,
+            DATE_FORMAT(r.record_time, '%H:%i') AS recordTime,
+            DATE_FORMAT(r.create_time, '%Y-%m-%d %H:%i:%s') AS createTime
+        FROM t_record r
+        LEFT JOIN t_category c ON r.category_id = c.id
+        WHERE r.deleted = 0
+          AND r.user_id = #{userId}
+        <if test="bookId != null">
+            AND r.book_id = #{bookId}
+        </if>
+        <if test="yearMonth != null and yearMonth != ''">
+            AND DATE_FORMAT(r.record_date, '%Y-%m') = #{yearMonth}
+        </if>
+        <if test="type != null">
+            AND r.type = #{type}
+        </if>
+        ORDER BY r.record_date DESC, r.record_time DESC, r.id DESC
+    </select>
+
+    <!-- 按分类统计金额 -->
+    <select id="selectCategoryStats" resultType="com.accounting.vo.RecordVO">
+        SELECT
+            r.category_id AS categoryId,
+            c.name AS categoryName,
+            c.icon AS categoryIcon,
+            r.type,
+            SUM(r.amount) AS amount
+        FROM t_record r
+        LEFT JOIN t_category c ON r.category_id = c.id
+        WHERE r.deleted = 0
+          AND r.user_id = #{userId}
+          AND DATE_FORMAT(r.record_date, '%Y-%m') = #{yearMonth}
+        <if test="type != null">
+            AND r.type = #{type}
+        </if>
+        GROUP BY r.category_id, c.name, c.icon, r.type
+        ORDER BY amount DESC
+    </select>
+
+    <!-- 按日统计金额 -->
+    <select id="selectDayStats" resultType="com.accounting.vo.RecordVO">
+        SELECT
+            DATE_FORMAT(r.record_date, '%Y-%m-%d') AS recordDate,
+            SUM(r.amount) AS amount
+        FROM t_record r
+        WHERE r.deleted = 0
+          AND r.user_id = #{userId}
+          AND DATE_FORMAT(r.record_date, '%Y-%m') = #{yearMonth}
+        <if test="type != null">
+            AND r.type = #{type}
+        </if>
+        GROUP BY r.record_date
+        ORDER BY r.record_date ASC
+    </select>
+
+</mapper>
