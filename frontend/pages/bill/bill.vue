@@ -23,17 +23,19 @@
       </view>
     </view>
 
-    <!-- 月度汇总 -->
-    <view class="month-summary">
+    <!-- 月度汇总 - 蓝紫渐变卡片 -->
+    <view class="summary-card">
       <view class="summary-row">
         <view class="summary-col">
           <text class="summary-label">收入</text>
-          <text class="summary-value income">¥{{ formatMoney(totalIncome) }}</text>
+          <text class="summary-value">¥{{ formatMoney(totalIncome) }}</text>
         </view>
+        <view class="summary-divider"></view>
         <view class="summary-col">
           <text class="summary-label">支出</text>
-          <text class="summary-value expense">¥{{ formatMoney(totalExpense) }}</text>
+          <text class="summary-value">¥{{ formatMoney(totalExpense) }}</text>
         </view>
+        <view class="summary-divider"></view>
         <view class="summary-col">
           <text class="summary-label">结余</text>
           <text class="summary-value">¥{{ formatMoney(balance) }}</text>
@@ -42,7 +44,7 @@
     </view>
 
     <!-- 日账单列表 -->
-    <view class="bill-list">
+    <scroll-view scroll-y class="bill-scroll">
       <view class="day-group" v-for="day in dailyList" :key="day.date">
         <view class="day-header">
           <view class="day-left">
@@ -55,9 +57,11 @@
           </view>
         </view>
         
-        <view class="record-list">
+        <view class="record-card">
           <view class="record-item" v-for="item in day.records" :key="item.id" @longpress="onRecordLongPress(item)">
-            <view class="record-icon">{{ item.categoryIcon }}</view>
+            <view class="record-icon-wrap" :style="{ background: getIconBg(item.categoryName) }">
+              <image class="record-icon-img" :src="getIconPath(item.categoryName, item.type)" mode="aspectFit"></image>
+            </view>
             <view class="record-info">
               <text class="record-category">{{ item.categoryName }}</text>
               <text class="record-remark" v-if="item.remark">{{ item.remark }}</text>
@@ -70,16 +74,19 @@
       </view>
 
       <view class="empty-state" v-if="dailyList.length === 0">
-        <text class="empty-icon">📝</text>
+        <image class="empty-icon-img" src="/static/category/qita_out.png" mode="aspectFit" style="width: 120rpx; height: 120rpx; opacity: 0.5;"></image>
         <text class="empty-text">本月暂无记录</text>
       </view>
-    </view>
+
+      <view style="height: 40rpx;"></view>
+    </scroll-view>
   </view>
 </template>
 
 <script>
 import { getMonthBill, deleteRecord } from '../../api/index';
 import { formatMoney, getCurrentYearMonth, getMonthName, getPrevMonth, getNextMonth, formatDateDisplay } from '../../utils/util';
+import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
 
 export default {
   data() {
@@ -97,16 +104,27 @@ export default {
       return getMonthName(this.currentMonth);
     }
   },
-  onLoad() {
+  async onLoad() {
     const sysInfo = uni.getSystemInfoSync();
     this.statusBarHeight = sysInfo.statusBarHeight || 20;
-    this.loadData();
+    try {
+      await getApp().ensureLogin();
+      this.loadData();
+    } catch (e) {
+      console.error('登录未完成', e);
+    }
   },
   methods: {
     formatMoney,
     formatDateDisplay,
+    getIconPath(name, type) {
+      return getCategoryIconPath(name, type);
+    },
     goBack() {
       uni.navigateBack();
+    },
+    getIconBg(name) {
+      return getCategoryBgColor(name);
     },
     async loadData() {
       try {
@@ -161,8 +179,9 @@ export default {
 <style lang="scss">
 .page {
   min-height: 100vh;
-  background: #F8F9FE;
-  padding-bottom: 40rpx;
+  background: #FAFBFE;
+  display: flex;
+  flex-direction: column;
 }
 
 .nav-bar {
@@ -198,7 +217,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16rpx 0;
+  padding: 8rpx 0 16rpx;
 }
 
 .month-arrow {
@@ -208,7 +227,8 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 40rpx;
-  color: #7C9FF5;
+  color: #7B9EF5;
+  font-weight: 600;
 }
 
 .month-text {
@@ -218,17 +238,18 @@ export default {
   margin: 0 32rpx;
 }
 
-/* 月度汇总 */
-.month-summary {
-  margin: 16rpx 32rpx;
-  background: #FFFFFF;
+/* 月度汇总 - 蓝紫渐变卡片 */
+.summary-card {
+  margin: 0 32rpx 24rpx;
+  background: linear-gradient(135deg, #7B9EF5 0%, #9BB0F7 40%, #B8A0F5 100%);
   border-radius: 24rpx;
   padding: 32rpx;
-  box-shadow: 0 2rpx 12rpx rgba(124, 159, 245, 0.08);
+  box-shadow: 0 8rpx 32rpx rgba(123, 158, 245, 0.25);
 }
 
 .summary-row {
   display: flex;
+  align-items: center;
 }
 
 .summary-col {
@@ -239,28 +260,27 @@ export default {
 .summary-label {
   display: block;
   font-size: 24rpx;
-  color: #9CA3AF;
+  color: rgba(255, 255, 255, 0.8);
   margin-bottom: 8rpx;
 }
 
 .summary-value {
   display: block;
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #2D3142;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #FFFFFF;
 }
 
-.summary-value.income {
-  color: #5CC9A7;
+.summary-divider {
+  width: 2rpx;
+  height: 56rpx;
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.summary-value.expense {
-  color: #F5707A;
-}
-
-/* 日账单 */
-.bill-list {
-  padding: 16rpx 32rpx;
+/* 日账单列表 */
+.bill-scroll {
+  flex: 1;
+  padding: 0 32rpx;
 }
 
 .day-group {
@@ -306,17 +326,18 @@ export default {
   color: #5CC9A7;
 }
 
-.record-list {
+/* 记录卡片 */
+.record-card {
   background: #FFFFFF;
   border-radius: 20rpx;
   overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(124, 159, 245, 0.08);
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.08);
 }
 
 .record-item {
   display: flex;
   align-items: center;
-  padding: 28rpx 28rpx;
+  padding: 24rpx 28rpx;
   border-bottom: 1rpx solid #F3F4F8;
 }
 
@@ -324,16 +345,20 @@ export default {
   border-bottom: none;
 }
 
-.record-icon {
+.record-icon-wrap {
   width: 72rpx;
   height: 72rpx;
-  background: #F8F9FE;
   border-radius: 18rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32rpx;
   margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.record-icon-img {
+  width: 44rpx;
+  height: 44rpx;
 }
 
 .record-info {
@@ -377,7 +402,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 100rpx 0;
+  padding: 120rpx 0;
 }
 
 .empty-icon {

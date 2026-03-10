@@ -1,8 +1,8 @@
 {
   "navigationBarTitleText": "统计",
-  "navigationBarBackgroundColor": "#F8F9FE",
+  "navigationBarBackgroundColor": "#FAFBFE",
   "navigationBarTextStyle": "black",
-  "backgroundColor": "#F8F9FE",
+  "backgroundColor": "#FAFBFE",
   "navigationStyle": "custom",
   "usingComponents": {}
 }

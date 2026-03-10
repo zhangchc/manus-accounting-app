@@ -11,13 +11,13 @@
   "window": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "轻记账",
-    "navigationBarBackgroundColor": "#F8F9FE",
-    "backgroundColor": "#F8F9FE",
+    "navigationBarBackgroundColor": "#FAFBFE",
+    "backgroundColor": "#FAFBFE",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#7C9FF5",
+    "color": "#9CA3AF",
+    "selectedColor": "#7B9EF5",
     "borderStyle": "white",
     "backgroundColor": "#FFFFFF",
     "list": [
@@ -29,7 +29,7 @@
       },
       {
         "pagePath": "pages/add/add",
-        "text": "记账",
+        "text": "记一笔",
         "iconPath": "static/icons/add.png",
         "selectedIconPath": "static/icons/add-active.png"
       },
@@ -48,5 +48,6 @@
     ]
   },
   "permission": {},
+  "lazyCodeLoading": "requiredComponents",
   "usingComponents": {}
 }

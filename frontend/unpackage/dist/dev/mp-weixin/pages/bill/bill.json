@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "账单",
-  "navigationBarBackgroundColor": "#F8F9FE",
+  "navigationBarBackgroundColor": "#FAFBFE",
   "navigationBarTextStyle": "black",
   "navigationStyle": "custom",
   "usingComponents": {}

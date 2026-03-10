@@ -4,11 +4,133 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6c1a973c-a77d-47ff-b770-1a93f0f1f185" name="Changes" comment="" />
+    <list default="true" id="6c1a973c-a77d-47ff-b770-1a93f0f1f185" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/qaplug_profiles.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/accounting/entity/Budget.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/accounting/entity/Budget.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/accounting/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/accounting/service/impl/UserServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/AccountingApplication.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/AccountingApplication.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/common/BusinessException.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/common/BusinessException.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/common/GlobalExceptionHandler.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/common/GlobalExceptionHandler.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/common/Result.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/common/Result.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/config/CorsConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/config/CorsConfig.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/config/MybatisPlusConfig$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/config/MybatisPlusConfig$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/config/MybatisPlusConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/config/MybatisPlusConfig.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/config/WebConfig$AuthInterceptor.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/config/WebConfig$AuthInterceptor.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/config/WebConfig.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/config/WebConfig.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/controller/BookController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/controller/BookController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/controller/BudgetController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/controller/BudgetController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/controller/CategoryController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/controller/CategoryController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/controller/RecordController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/controller/RecordController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/controller/UserController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/controller/UserController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/dto/BudgetDTO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/dto/BudgetDTO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/dto/LoginDTO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/dto/LoginDTO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/dto/RecordDTO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/dto/RecordDTO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/entity/Book.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/entity/Book.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/entity/Budget.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/entity/Budget.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/entity/Category.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/entity/Category.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/entity/Record.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/entity/Record.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/entity/User.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/entity/User.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/mapper/BookMapper.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/mapper/BookMapper.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/mapper/BudgetMapper.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/mapper/BudgetMapper.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/mapper/CategoryMapper.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/mapper/CategoryMapper.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/mapper/RecordMapper.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/mapper/RecordMapper.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/mapper/UserMapper.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/mapper/UserMapper.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/BookService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/BookService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/BudgetService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/BudgetService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/CategoryService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/CategoryService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/RecordService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/RecordService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/UserService.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/UserService.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/BookServiceImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/BookServiceImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/BudgetServiceImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/BudgetServiceImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/CategoryServiceImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/CategoryServiceImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/RecordServiceImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/RecordServiceImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/UserServiceImpl.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/service/impl/UserServiceImpl.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/utils/JwtUtil.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/utils/JwtUtil.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/vo/DailyBillVO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/vo/DailyBillVO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/vo/MonthBillVO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/vo/MonthBillVO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/vo/RecordVO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/vo/RecordVO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/vo/StatisticsVO$CategoryStatVO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/vo/StatisticsVO$CategoryStatVO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/vo/StatisticsVO$DayTrendVO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/vo/StatisticsVO$DayTrendVO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/accounting/vo/StatisticsVO.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/accounting/vo/StatisticsVO.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/manifest.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/manifest.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/pages.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/add/add.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/pages/add/add.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/bill/bill.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/pages/bill/bill.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/budget/budget.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/pages/budget/budget.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/index/index.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/pages/index/index.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/mine/mine.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/pages/mine/mine.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/statistics/statistics.vue" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/pages/statistics/statistics.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/add-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/add-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/add.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/add.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/chart-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/chart-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/chart.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/chart.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/home-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/home-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/home.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/home.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/mine-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/mine-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/mine.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/static/icons/mine.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/uni.scss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/uni.scss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/common/main.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/common/main.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/common/vendor.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/common/vendor.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/add/add.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/add/add.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/bill/bill.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/bill/bill.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/budget/budget.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/budget/budget.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/index/index.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/index/index.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/mine/mine.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/mine/mine.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/statistics/statistics.js.map" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/.sourcemap/mp-weixin/pages/statistics/statistics.js.map" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/common/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/common/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/common/main.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/common/main.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/common/vendor.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/common/vendor.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/add/add.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/bill/bill.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/budget/budget.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/index/index.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/mine/mine.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.js" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.wxml" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.wxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.wxss" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/pages/statistics/statistics.wxss" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/project.config.json" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/project.config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/project.private.config.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/add-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/add-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/add.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/add.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/chart-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/chart-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/chart.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/chart.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/home-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/home-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/home.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/home.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/mine-active.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/mine-active.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/mine.png" beforeDir="false" afterPath="$PROJECT_DIR$/../frontend/unpackage/dist/dev/mp-weixin/static/icons/mine.png" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
@@ -18,24 +140,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "Spring Boot.AccountingApplication.executor": "Run",
-    "last_opened_file_path": "/Users/zhangchuancun/Downloads/jizhangxiaochengxu/accounting-app/backend",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Maven.accounting-backend [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.accounting-backend [install].executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Spring Boot.AccountingApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/zhangchuancun/manus-accounting-app/backend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="AccountingApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="accounting-backend" />
@@ -62,6 +191,7 @@
       <updated>1773156146918</updated>
       <workItem from="1773156148475" duration="655000" />
       <workItem from="1773158598023" duration="957000" />
+      <workItem from="1773163069621" duration="2881000" />
     </task>
     <servers />
   </component>

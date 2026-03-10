@@ -1,74 +1,84 @@
 <template>
   <view class="page">
-    <!-- 顶部状态栏占位 -->
-    <view :style="{ height: statusBarHeight + 'px' }"></view>
-
-    <!-- 用户信息卡片 -->
-    <view class="user-card">
-      <view class="user-avatar">
-        <text class="avatar-text">{{ avatarText }}</text>
+    <!-- 蓝紫渐变头部 + 波浪底边 -->
+    <view class="profile-header">
+      <view :style="{ height: statusBarHeight + 'px' }"></view>
+      <view class="profile-content">
+        <view class="avatar-circle">
+          <text class="avatar-letter">{{ avatarText }}</text>
+        </view>
+        <text class="profile-name">{{ userInfo.nickName || '记账用户' }}</text>
+        <text class="profile-sign">记录生活，理清收支 ✨</text>
       </view>
-      <view class="user-info">
-        <text class="user-name">{{ userInfo.nickName || '记账用户' }}</text>
-        <text class="user-desc">记录每一笔，生活更美好</text>
+      <!-- 波浪底边 -->
+      <view class="wave-bottom">
+        <view class="wave-shape"></view>
       </view>
     </view>
 
-    <!-- 年度汇总 -->
-    <view class="year-summary">
-      <view class="year-header">
-        <text class="year-title">{{ currentYear }}年汇总</text>
-      </view>
-      <view class="year-body">
+    <!-- 年度总结卡片 -->
+    <view class="year-card">
+      <text class="year-title">{{ currentYear }}年度总结</text>
+      <view class="year-data">
         <view class="year-item">
-          <text class="year-amount expense">¥{{ formatMoney(yearExpense) }}</text>
-          <text class="year-label">总支出</text>
-        </view>
-        <view class="year-divider"></view>
-        <view class="year-item">
-          <text class="year-amount income">¥{{ formatMoney(yearIncome) }}</text>
           <text class="year-label">总收入</text>
+          <text class="year-value income">¥{{ formatMoney(yearIncome) }}</text>
         </view>
         <view class="year-divider"></view>
         <view class="year-item">
-          <text class="year-amount">¥{{ formatMoney(yearBalance) }}</text>
+          <text class="year-label">总支出</text>
+          <text class="year-value expense">¥{{ formatMoney(yearExpense) }}</text>
+        </view>
+        <view class="year-divider"></view>
+        <view class="year-item">
           <text class="year-label">结余</text>
+          <text class="year-value">¥{{ formatMoney(yearBalance) }}</text>
         </view>
       </view>
     </view>
 
     <!-- 功能菜单 -->
-    <view class="menu-section">
-      <view class="menu-card">
-        <view class="menu-item" @click="goToBill">
+    <view class="menu-card">
+      <view class="menu-item" @click="goToBill">
+        <view class="menu-left">
           <text class="menu-icon">📋</text>
-          <text class="menu-text">月度账单</text>
-          <text class="menu-arrow">›</text>
+          <text class="menu-name">月度账单</text>
         </view>
-        <view class="menu-item" @click="goToBudget">
-          <text class="menu-icon">🎯</text>
-          <text class="menu-text">预算管理</text>
-          <text class="menu-arrow">›</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" @click="goToBudget">
+        <view class="menu-left">
+          <text class="menu-icon">💰</text>
+          <text class="menu-name">预算管理</text>
         </view>
-        <view class="menu-item" @click="goToBooks">
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" @click="goToBooks">
+        <view class="menu-left">
           <text class="menu-icon">📒</text>
-          <text class="menu-text">我的账本</text>
-          <text class="menu-arrow">›</text>
+          <text class="menu-name">我的账本</text>
         </view>
+        <text class="menu-arrow">›</text>
       </view>
-
-      <view class="menu-card">
-        <view class="menu-item" @click="exportData">
+      <view class="menu-item" @click="exportData">
+        <view class="menu-left">
           <text class="menu-icon">📤</text>
-          <text class="menu-text">数据导出</text>
-          <text class="menu-arrow">›</text>
+          <text class="menu-name">数据导出</text>
         </view>
-        <view class="menu-item" @click="showAbout">
-          <text class="menu-icon">💡</text>
-          <text class="menu-text">关于轻记账</text>
-          <text class="menu-arrow">›</text>
-        </view>
+        <text class="menu-arrow">›</text>
       </view>
+      <view class="menu-item" @click="showAbout">
+        <view class="menu-left">
+          <text class="menu-icon">💡</text>
+          <text class="menu-name">关于我们</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 退出登录 -->
+    <view class="logout-btn" @click="logout">
+      <text class="logout-text">退出登录</text>
     </view>
   </view>
 </template>
@@ -98,9 +108,14 @@ export default {
     const sysInfo = uni.getSystemInfoSync();
     this.statusBarHeight = sysInfo.statusBarHeight || 20;
   },
-  onShow() {
-    this.loadUserInfo();
-    this.loadYearSummary();
+  async onShow() {
+    try {
+      await getApp().ensureLogin();
+      this.loadUserInfo();
+      this.loadYearSummary();
+    } catch (e) {
+      console.error('登录未完成', e);
+    }
   },
   methods: {
     formatMoney,
@@ -142,6 +157,19 @@ export default {
         showCancel: false,
         confirmText: '知道了'
       });
+    },
+    logout() {
+      uni.showModal({
+        title: '提示',
+        content: '确定退出登录吗？',
+        success: (res) => {
+          if (res.confirm) {
+            uni.removeStorageSync('token');
+            uni.removeStorageSync('userInfo');
+            uni.showToast({ title: '已退出' });
+          }
+        }
+      });
     }
   }
 };
@@ -150,73 +178,91 @@ export default {
 <style lang="scss">
 .page {
   min-height: 100vh;
-  background: #F8F9FE;
+  background: #FAFBFE;
   padding-bottom: 120rpx;
 }
 
-/* 用户信息卡片 */
-.user-card {
-  display: flex;
-  align-items: center;
-  padding: 48rpx 32rpx 32rpx;
+/* 蓝紫渐变头部 */
+.profile-header {
+  background: linear-gradient(135deg, #7B9EF5 0%, #9BB0F7 40%, #B8A0F5 100%);
+  padding-bottom: 60rpx;
+  position: relative;
 }
 
-.user-avatar {
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 0 48rpx;
+}
+
+.avatar-circle {
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7C9FF5, #B8A0F5);
+  background: rgba(255, 255, 255, 0.25);
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 28rpx;
-  box-shadow: 0 8rpx 24rpx rgba(124, 159, 245, 0.3);
+  margin-bottom: 20rpx;
 }
 
-.avatar-text {
+.avatar-letter {
   font-size: 48rpx;
   color: #FFFFFF;
-  font-weight: 600;
-}
-
-.user-info {
-  flex: 1;
-}
-
-.user-name {
-  display: block;
-  font-size: 36rpx;
   font-weight: 700;
-  color: #2D3142;
+}
+
+.profile-name {
+  font-size: 36rpx;
+  color: #FFFFFF;
+  font-weight: 600;
   margin-bottom: 8rpx;
 }
 
-.user-desc {
-  display: block;
+.profile-sign {
   font-size: 26rpx;
-  color: #9CA3AF;
+  color: rgba(255, 255, 255, 0.8);
 }
 
-/* 年度汇总 */
-.year-summary {
-  margin: 16rpx 32rpx;
-  background: linear-gradient(135deg, #7C9FF5 0%, #A8C0F7 50%, #B8A0F5 100%);
+/* 波浪底边 */
+.wave-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40rpx;
+  overflow: hidden;
+}
+
+.wave-shape {
+  width: 100%;
+  height: 100%;
+  background: #FAFBFE;
+  border-radius: 50% 50% 0 0;
+}
+
+/* 年度总结卡片 */
+.year-card {
+  margin: -20rpx 32rpx 24rpx;
+  background: #FFFFFF;
   border-radius: 24rpx;
-  padding: 32rpx;
-  color: #FFFFFF;
-  box-shadow: 0 8rpx 40rpx rgba(124, 159, 245, 0.3);
-}
-
-.year-header {
-  margin-bottom: 28rpx;
+  padding: 28rpx 32rpx;
+  box-shadow: 0 4rpx 24rpx rgba(123, 158, 245, 0.12);
+  position: relative;
+  z-index: 2;
 }
 
 .year-title {
+  display: block;
   font-size: 28rpx;
-  opacity: 0.9;
+  color: #9CA3AF;
+  margin-bottom: 20rpx;
+  text-align: center;
 }
 
-.year-body {
+.year-data {
   display: flex;
   align-items: center;
 }
@@ -226,42 +272,48 @@ export default {
   text-align: center;
 }
 
-.year-amount {
-  display: block;
-  font-size: 32rpx;
-  font-weight: 700;
-  margin-bottom: 8rpx;
-}
-
 .year-label {
   display: block;
   font-size: 24rpx;
-  opacity: 0.8;
+  color: #9CA3AF;
+  margin-bottom: 8rpx;
+}
+
+.year-value {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2D3142;
+}
+
+.year-value.income {
+  color: #5CC9A7;
+}
+
+.year-value.expense {
+  color: #F5707A;
 }
 
 .year-divider {
-  width: 1rpx;
-  height: 60rpx;
-  background: rgba(255, 255, 255, 0.3);
+  width: 2rpx;
+  height: 56rpx;
+  background: #EEEEF3;
 }
 
 /* 功能菜单 */
-.menu-section {
-  padding: 16rpx 32rpx;
-}
-
 .menu-card {
+  margin: 0 32rpx 24rpx;
   background: #FFFFFF;
   border-radius: 24rpx;
-  margin-bottom: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(124, 159, 245, 0.08);
   overflow: hidden;
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.08);
 }
 
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 32rpx;
+  justify-content: space-between;
+  padding: 32rpx 32rpx;
   border-bottom: 1rpx solid #F3F4F8;
 }
 
@@ -269,19 +321,48 @@ export default {
   border-bottom: none;
 }
 
-.menu-icon {
-  font-size: 36rpx;
-  margin-right: 24rpx;
+.menu-item:active {
+  background: #F8F9FE;
 }
 
-.menu-text {
-  flex: 1;
+.menu-left {
+  display: flex;
+  align-items: center;
+}
+
+.menu-icon {
+  font-size: 36rpx;
+  margin-right: 20rpx;
+}
+
+.menu-name {
   font-size: 30rpx;
   color: #2D3142;
+  font-weight: 500;
 }
 
 .menu-arrow {
   font-size: 32rpx;
   color: #D1D5DB;
+}
+
+/* 退出登录 */
+.logout-btn {
+  margin: 24rpx 32rpx;
+  padding: 28rpx 0;
+  text-align: center;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.08);
+}
+
+.logout-btn:active {
+  background: #FFF0F0;
+}
+
+.logout-text {
+  font-size: 30rpx;
+  color: #F5707A;
+  font-weight: 500;
 }
 </style>

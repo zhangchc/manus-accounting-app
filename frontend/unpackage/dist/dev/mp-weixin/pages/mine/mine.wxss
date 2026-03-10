@@ -1,6 +1,8 @@
 @charset "UTF-8";
-/* 全局样式变量 - 简约清爽温馨风格 */
-/* 主题色 */
+/* 全局样式变量 - 蓝紫色主题 简约清爽温馨风格 */
+/* 主题色 - 蓝紫渐变 */
+/* 渐变 */
+/* 分类图标背景色 */
 /* 温馨辅助色 */
 /* 文字颜色 */
 /* 背景色 */
@@ -10,63 +12,80 @@
 /* 间距 */
 .page {
   min-height: 100vh;
-  background: #F8F9FE;
+  background: #FAFBFE;
   padding-bottom: 120rpx;
 }
-/* 用户信息卡片 */
-.user-card {
-  display: flex;
-  align-items: center;
-  padding: 48rpx 32rpx 32rpx;
+/* 蓝紫渐变头部 */
+.profile-header {
+  background: linear-gradient(135deg, #7B9EF5 0%, #9BB0F7 40%, #B8A0F5 100%);
+  padding-bottom: 60rpx;
+  position: relative;
 }
-.user-avatar {
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 0 48rpx;
+}
+.avatar-circle {
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7C9FF5, #B8A0F5);
+  background: rgba(255, 255, 255, 0.25);
+  border: 4rpx solid rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 28rpx;
-  box-shadow: 0 8rpx 24rpx rgba(124, 159, 245, 0.3);
+  margin-bottom: 20rpx;
 }
-.avatar-text {
+.avatar-letter {
   font-size: 48rpx;
   color: #FFFFFF;
-  font-weight: 600;
-}
-.user-info {
-  flex: 1;
-}
-.user-name {
-  display: block;
-  font-size: 36rpx;
   font-weight: 700;
-  color: #2D3142;
+}
+.profile-name {
+  font-size: 36rpx;
+  color: #FFFFFF;
+  font-weight: 600;
   margin-bottom: 8rpx;
 }
-.user-desc {
-  display: block;
+.profile-sign {
   font-size: 26rpx;
-  color: #9CA3AF;
+  color: rgba(255, 255, 255, 0.8);
 }
-/* 年度汇总 */
-.year-summary {
-  margin: 16rpx 32rpx;
-  background: linear-gradient(135deg, #7C9FF5 0%, #A8C0F7 50%, #B8A0F5 100%);
+/* 波浪底边 */
+.wave-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40rpx;
+  overflow: hidden;
+}
+.wave-shape {
+  width: 100%;
+  height: 100%;
+  background: #FAFBFE;
+  border-radius: 50% 50% 0 0;
+}
+/* 年度总结卡片 */
+.year-card {
+  margin: -20rpx 32rpx 24rpx;
+  background: #FFFFFF;
   border-radius: 24rpx;
-  padding: 32rpx;
-  color: #FFFFFF;
-  box-shadow: 0 8rpx 40rpx rgba(124, 159, 245, 0.3);
-}
-.year-header {
-  margin-bottom: 28rpx;
+  padding: 28rpx 32rpx;
+  box-shadow: 0 4rpx 24rpx rgba(123, 158, 245, 0.12);
+  position: relative;
+  z-index: 2;
 }
 .year-title {
+  display: block;
   font-size: 28rpx;
-  opacity: 0.9;
+  color: #9CA3AF;
+  margin-bottom: 20rpx;
+  text-align: center;
 }
-.year-body {
+.year-data {
   display: flex;
   align-items: center;
 }
@@ -74,52 +93,81 @@
   flex: 1;
   text-align: center;
 }
-.year-amount {
-  display: block;
-  font-size: 32rpx;
-  font-weight: 700;
-  margin-bottom: 8rpx;
-}
 .year-label {
   display: block;
   font-size: 24rpx;
-  opacity: 0.8;
+  color: #9CA3AF;
+  margin-bottom: 8rpx;
+}
+.year-value {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2D3142;
+}
+.year-value.income {
+  color: #5CC9A7;
+}
+.year-value.expense {
+  color: #F5707A;
 }
 .year-divider {
-  width: 1rpx;
-  height: 60rpx;
-  background: rgba(255, 255, 255, 0.3);
+  width: 2rpx;
+  height: 56rpx;
+  background: #EEEEF3;
 }
 /* 功能菜单 */
-.menu-section {
-  padding: 16rpx 32rpx;
-}
 .menu-card {
+  margin: 0 32rpx 24rpx;
   background: #FFFFFF;
   border-radius: 24rpx;
-  margin-bottom: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(124, 159, 245, 0.08);
   overflow: hidden;
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.08);
 }
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 32rpx;
+  justify-content: space-between;
+  padding: 32rpx 32rpx;
   border-bottom: 1rpx solid #F3F4F8;
 }
 .menu-item:last-child {
   border-bottom: none;
 }
+.menu-item:active {
+  background: #F8F9FE;
+}
+.menu-left {
+  display: flex;
+  align-items: center;
+}
 .menu-icon {
   font-size: 36rpx;
-  margin-right: 24rpx;
+  margin-right: 20rpx;
 }
-.menu-text {
-  flex: 1;
+.menu-name {
   font-size: 30rpx;
   color: #2D3142;
+  font-weight: 500;
 }
 .menu-arrow {
   font-size: 32rpx;
   color: #D1D5DB;
+}
+/* 退出登录 */
+.logout-btn {
+  margin: 24rpx 32rpx;
+  padding: 28rpx 0;
+  text-align: center;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.08);
+}
+.logout-btn:active {
+  background: #FFF0F0;
+}
+.logout-text {
+  font-size: 30rpx;
+  color: #F5707A;
+  font-weight: 500;
 }

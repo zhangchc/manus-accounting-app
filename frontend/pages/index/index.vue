@@ -6,46 +6,56 @@
     <!-- 头部区域 -->
     <view class="header">
       <view class="header-top">
-        <view class="greeting">
-          <text class="greeting-text">{{ greetingText }}</text>
-          <text class="greeting-emoji">{{ greetingEmoji }}</text>
+        <view class="greeting-area">
+          <text class="greeting-text">{{ greetingText }}，{{ userName }}</text>
+          <view class="header-date">
+            <text class="date-text">{{ todayStr }}</text>
+            <text class="date-emoji">{{ greetingEmoji }}</text>
+          </view>
         </view>
-        <view class="header-date">{{ todayStr }}</view>
+        <view class="user-avatar">
+          <text class="avatar-text">{{ avatarText }}</text>
+        </view>
       </view>
       
-      <!-- 总览卡片 -->
+      <!-- 本月概览卡片 -->
       <view class="overview-card">
-        <view class="overview-header">
-          <text class="overview-month" @click="showMonthPicker = true">{{ monthName }}</text>
-          <text class="overview-eye" @click="toggleAmount">{{ showAmount ? '👁' : '👁‍🗨' }}</text>
-        </view>
+        <text class="overview-title">本月概览</text>
         <view class="overview-body">
           <view class="overview-item">
-            <text class="overview-label">月支出</text>
-            <text class="overview-amount expense">{{ showAmount ? formatMoney(monthExpense) : '****' }}</text>
+            <view class="overview-icon-wrap expense-icon">
+              <text class="overview-icon-text">↓</text>
+            </view>
+            <text class="overview-label">支出</text>
+            <text class="overview-amount">{{ showAmount ? '¥' + formatMoney(monthExpense) : '****' }}</text>
           </view>
-          <view class="overview-divider"></view>
           <view class="overview-item">
-            <text class="overview-label">月收入</text>
-            <text class="overview-amount income">{{ showAmount ? formatMoney(monthIncome) : '****' }}</text>
+            <view class="overview-icon-wrap income-icon">
+              <text class="overview-icon-text">↑</text>
+            </view>
+            <text class="overview-label">收入</text>
+            <text class="overview-amount">{{ showAmount ? '¥' + formatMoney(monthIncome) : '****' }}</text>
           </view>
-          <view class="overview-divider"></view>
           <view class="overview-item">
-            <text class="overview-label">月结余</text>
-            <text class="overview-amount">{{ showAmount ? formatMoney(monthBalance) : '****' }}</text>
+            <view class="overview-icon-wrap balance-icon">
+              <text class="overview-icon-text">⚖</text>
+            </view>
+            <text class="overview-label">结余</text>
+            <text class="overview-amount">{{ showAmount ? '¥' + formatMoney(monthBalance) : '****' }}</text>
           </view>
         </view>
-        <!-- 预算进度 -->
-        <view class="budget-bar" v-if="budget > 0">
-          <view class="budget-info">
-            <text class="budget-text">月预算 ¥{{ formatMoney(budget) }}</text>
-            <text class="budget-remain" :class="{ 'over': budgetRemain < 0 }">
-              {{ budgetRemain >= 0 ? '剩余 ¥' + formatMoney(budgetRemain) : '超支 ¥' + formatMoney(Math.abs(budgetRemain)) }}
-            </text>
-          </view>
-          <view class="progress-bg">
-            <view class="progress-bar" :style="{ width: budgetPercent + '%' }" :class="{ 'over': budgetPercent > 100 }"></view>
-          </view>
+      </view>
+
+      <!-- 预算进度 -->
+      <view class="budget-section" v-if="budget > 0">
+        <view class="budget-info">
+          <text class="budget-label">月预算 ¥{{ formatMoney(budget) }}</text>
+          <text class="budget-remain" :class="{ over: budgetRemain < 0 }">
+            {{ budgetRemain >= 0 ? '剩余 ¥' + formatMoney(budgetRemain) : '超支 ¥' + formatMoney(Math.abs(budgetRemain)) }}
+          </text>
+        </view>
+        <view class="progress-bg">
+          <view class="progress-bar" :style="{ width: budgetPercent + '%' }" :class="{ warning: budgetPercent > 65, over: budgetPercent > 90 }"></view>
         </view>
       </view>
     </view>
@@ -54,26 +64,34 @@
     <view class="section">
       <view class="section-header">
         <text class="section-title">今日账单</text>
-        <text class="section-more" @click="goToBill">查看全部</text>
+        <view class="section-more" @click="goToBill">
+          <text class="more-text">查看全部</text>
+          <text class="more-arrow">›</text>
+        </view>
       </view>
       
       <view class="record-list" v-if="todayRecords.length > 0">
         <view class="record-item" v-for="item in todayRecords" :key="item.id" @longpress="onRecordLongPress(item)">
-          <view class="record-icon">{{ item.categoryIcon }}</view>
+          <view class="record-icon-wrap" :style="{ background: getIconBgColor(item.categoryName) }">
+            <image class="record-icon-img" :src="getIconPath(item.categoryName, item.type)" mode="aspectFit"></image>
+          </view>
           <view class="record-info">
             <text class="record-category">{{ item.categoryName }}</text>
             <text class="record-remark" v-if="item.remark">{{ item.remark }}</text>
+            <text class="record-time" v-if="item.recordTime">{{ item.recordTime ? item.recordTime.substring(0, 5) : '' }}</text>
           </view>
           <text class="record-amount" :class="item.type === 1 ? 'expense' : 'income'">
-            {{ item.type === 1 ? '-' : '+' }}{{ formatMoney(item.amount) }}
+            {{ item.type === 1 ? '-' : '+' }}¥{{ formatMoney(item.amount) }}
           </text>
         </view>
       </view>
       
       <view class="empty-state" v-else>
-        <text class="empty-icon">📝</text>
+        <image class="empty-icon-img" src="/static/category/qita_out.png" mode="aspectFit"></image>
         <text class="empty-text">今天还没有记账哦</text>
-        <view class="empty-btn" @click="goToAdd">记一笔</view>
+        <view class="empty-btn" @click="goToAdd">
+          <text class="empty-btn-text">记一笔</text>
+        </view>
       </view>
     </view>
 
@@ -86,14 +104,14 @@
 
 <script>
 import { getMonthBill, deleteRecord } from '../../api/index';
-import { formatMoney, getCurrentYearMonth, getCurrentDate, getMonthName } from '../../utils/util';
+import { formatMoney, getCurrentYearMonth, getCurrentDate } from '../../utils/util';
+import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
 
 export default {
   data() {
     return {
       statusBarHeight: 20,
       showAmount: true,
-      showMonthPicker: false,
       currentMonth: getCurrentYearMonth(),
       monthIncome: 0,
       monthExpense: 0,
@@ -101,10 +119,17 @@ export default {
       budget: 0,
       budgetRemain: 0,
       todayRecords: [],
-      allRecords: []
+      userInfo: {}
     };
   },
   computed: {
+    userName() {
+      return this.userInfo.nickName || '小明';
+    },
+    avatarText() {
+      const name = this.userName;
+      return name.charAt(0);
+    },
     greetingText() {
       const hour = new Date().getHours();
       if (hour < 6) return '夜深了';
@@ -125,21 +150,25 @@ export default {
     },
     todayStr() {
       const now = new Date();
+      const year = now.getFullYear();
       const month = now.getMonth() + 1;
       const day = now.getDate();
-      const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-      return `${month}月${day}日 周${weekDays[now.getDay()]}`;
-    },
-    monthName() {
-      return getMonthName(this.currentMonth);
+      const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+      return `${year}年${month}月${day}日 ${weekDays[now.getDay()]}`;
     },
     budgetPercent() {
       if (this.budget <= 0) return 0;
       return Math.min((this.monthExpense / this.budget) * 100, 100);
     }
   },
-  onShow() {
-    this.loadData();
+  async onShow() {
+    this.userInfo = uni.getStorageSync('userInfo') || {};
+    try {
+      await getApp().ensureLogin();
+      this.loadData();
+    } catch (e) {
+      console.error('登录未完成', e);
+    }
   },
   onLoad() {
     const sysInfo = uni.getSystemInfoSync();
@@ -147,6 +176,12 @@ export default {
   },
   methods: {
     formatMoney,
+    getIconPath(name, type) {
+      return getCategoryIconPath(name, type);
+    },
+    getIconBgColor(name) {
+      return getCategoryBgColor(name);
+    },
     async loadData() {
       try {
         const res = await getMonthBill({
@@ -173,9 +208,6 @@ export default {
       } catch (e) {
         console.error('加载数据失败', e);
       }
-    },
-    toggleAmount() {
-      this.showAmount = !this.showAmount;
     },
     goToAdd() {
       uni.switchTab({ url: '/pages/add/add' });
@@ -221,147 +253,209 @@ export default {
 <style lang="scss">
 .page {
   min-height: 100vh;
-  background: #F8F9FE;
+  background: #FAFBFE;
   padding-bottom: 120rpx;
 }
 
+/* 头部区域 */
 .header {
-  padding: 0 32rpx 32rpx;
+  padding: 0 32rpx 24rpx;
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 24rpx 0;
+  align-items: flex-start;
+  padding: 24rpx 0 28rpx;
 }
 
-.greeting {
+.greeting-area {
+  flex: 1;
+}
+
+.greeting-text {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #2D3142;
+  margin-bottom: 8rpx;
+}
+
+.header-date {
   display: flex;
   align-items: center;
 }
 
-.greeting-text {
-  font-size: 36rpx;
-  font-weight: 600;
-  color: #2D3142;
-}
-
-.greeting-emoji {
-  font-size: 36rpx;
-  margin-left: 12rpx;
-}
-
-.header-date {
+.date-text {
   font-size: 26rpx;
   color: #9CA3AF;
 }
 
-/* 总览卡片 */
-.overview-card {
-  background: linear-gradient(135deg, #7C9FF5 0%, #A8C0F7 50%, #B8A0F5 100%);
-  border-radius: 24rpx;
-  padding: 36rpx;
-  color: #FFFFFF;
-  box-shadow: 0 8rpx 40rpx rgba(124, 159, 245, 0.3);
+.date-emoji {
+  font-size: 26rpx;
+  margin-left: 8rpx;
 }
 
-.overview-header {
+.user-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7B9EF5, #B8A0F5);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 32rpx;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(123, 158, 245, 0.3);
+  flex-shrink: 0;
+  margin-left: 24rpx;
 }
 
-.overview-month {
+.avatar-text {
+  font-size: 32rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* 本月概览卡片 - 蓝紫渐变 */
+.overview-card {
+  background: linear-gradient(135deg, #7B9EF5 0%, #9BB0F7 40%, #B8A0F5 100%);
+  border-radius: 28rpx;
+  padding: 36rpx 32rpx 40rpx;
+  color: #FFFFFF;
+  box-shadow: 0 12rpx 48rpx rgba(123, 158, 245, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.overview-card::before {
+  content: '';
+  position: absolute;
+  top: -40rpx;
+  right: -40rpx;
+  width: 200rpx;
+  height: 200rpx;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.overview-card::after {
+  content: '';
+  position: absolute;
+  bottom: -60rpx;
+  left: -30rpx;
+  width: 160rpx;
+  height: 160rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+
+.overview-title {
   font-size: 28rpx;
   opacity: 0.9;
-}
-
-.overview-eye {
-  font-size: 32rpx;
-  opacity: 0.8;
+  margin-bottom: 32rpx;
+  display: block;
+  position: relative;
+  z-index: 1;
 }
 
 .overview-body {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .overview-item {
-  flex: 1;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.overview-label {
-  display: block;
-  font-size: 24rpx;
-  opacity: 0.8;
+.overview-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 12rpx;
 }
 
-.overview-amount {
-  display: block;
-  font-size: 36rpx;
-  font-weight: 700;
+.overview-icon-text {
+  font-size: 32rpx;
+  color: #FFFFFF;
+  font-weight: 600;
 }
 
-.overview-divider {
-  width: 1rpx;
-  height: 60rpx;
-  background: rgba(255, 255, 255, 0.3);
+.overview-label {
+  font-size: 24rpx;
+  opacity: 0.85;
+  margin-bottom: 8rpx;
+}
+
+.overview-amount {
+  font-size: 30rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
 /* 预算进度 */
-.budget-bar {
-  margin-top: 32rpx;
-  padding-top: 24rpx;
-  border-top: 1rpx solid rgba(255, 255, 255, 0.2);
+.budget-section {
+  margin-top: 24rpx;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  padding: 24rpx 28rpx;
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.08);
 }
 
 .budget-info {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12rpx;
+  margin-bottom: 16rpx;
 }
 
-.budget-text {
-  font-size: 24rpx;
-  opacity: 0.8;
+.budget-label {
+  font-size: 26rpx;
+  color: #6B7280;
 }
 
 .budget-remain {
-  font-size: 24rpx;
-  opacity: 0.9;
+  font-size: 26rpx;
+  color: #5CC9A7;
+  font-weight: 500;
 }
 
 .budget-remain.over {
-  color: #FFD166;
+  color: #F5707A;
 }
 
 .progress-bg {
-  height: 8rpx;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4rpx;
+  height: 12rpx;
+  background: #F0F1F5;
+  border-radius: 6rpx;
   overflow: hidden;
 }
 
 .progress-bar {
   height: 100%;
-  background: #FFFFFF;
-  border-radius: 4rpx;
+  background: linear-gradient(90deg, #7B9EF5, #B8A0F5);
+  border-radius: 6rpx;
   transition: width 0.3s ease;
 }
 
+.progress-bar.warning {
+  background: linear-gradient(90deg, #F5C07C, #F5A05C);
+}
+
 .progress-bar.over {
-  background: #FFD166;
+  background: linear-gradient(90deg, #F5707A, #F55070);
 }
 
 /* 区块 */
 .section {
   padding: 0 32rpx;
-  margin-top: 32rpx;
+  margin-top: 36rpx;
 }
 
 .section-header {
@@ -372,46 +466,57 @@ export default {
 }
 
 .section-title {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 34rpx;
+  font-weight: 700;
   color: #2D3142;
 }
 
 .section-more {
+  display: flex;
+  align-items: center;
+}
+
+.more-text {
   font-size: 26rpx;
-  color: #7C9FF5;
+  color: #7B9EF5;
+}
+
+.more-arrow {
+  font-size: 28rpx;
+  color: #7B9EF5;
+  margin-left: 4rpx;
 }
 
 /* 记录列表 */
 .record-list {
-  background: #FFFFFF;
-  border-radius: 24rpx;
-  padding: 8rpx 0;
-  box-shadow: 0 2rpx 12rpx rgba(124, 159, 245, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
 .record-item {
   display: flex;
   align-items: center;
-  padding: 28rpx 32rpx;
-  border-bottom: 1rpx solid #F3F4F8;
-}
-
-.record-item:last-child {
-  border-bottom: none;
-}
-
-.record-icon {
-  width: 80rpx;
-  height: 80rpx;
-  background: #F8F9FE;
+  padding: 28rpx 28rpx;
+  background: #FFFFFF;
   border-radius: 20rpx;
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.06);
+}
+
+.record-icon-wrap {
+  width: 84rpx;
+  height: 84rpx;
+  border-radius: 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36rpx;
   margin-right: 24rpx;
   flex-shrink: 0;
+}
+
+.record-icon-img {
+  width: 52rpx;
+  height: 52rpx;
 }
 
 .record-info {
@@ -423,22 +528,29 @@ export default {
   display: block;
   font-size: 30rpx;
   color: #2D3142;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .record-remark {
   display: block;
   font-size: 24rpx;
-  color: #9CA3AF;
-  margin-top: 6rpx;
+  color: #6B7280;
+  margin-top: 4rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.record-time {
+  display: block;
+  font-size: 22rpx;
+  color: #9CA3AF;
+  margin-top: 4rpx;
+}
+
 .record-amount {
   font-size: 32rpx;
-  font-weight: 600;
+  font-weight: 700;
   flex-shrink: 0;
   margin-left: 16rpx;
 }
@@ -459,12 +571,14 @@ export default {
   padding: 80rpx 0;
   background: #FFFFFF;
   border-radius: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(124, 159, 245, 0.08);
+  box-shadow: 0 2rpx 16rpx rgba(123, 158, 245, 0.06);
 }
 
-.empty-icon {
-  font-size: 80rpx;
+.empty-icon-img {
+  width: 120rpx;
+  height: 120rpx;
   margin-bottom: 24rpx;
+  opacity: 0.6;
 }
 
 .empty-text {
@@ -474,11 +588,16 @@ export default {
 }
 
 .empty-btn {
-  padding: 16rpx 48rpx;
-  background: linear-gradient(135deg, #7C9FF5, #A8C0F7);
-  color: #FFFFFF;
+  padding: 18rpx 56rpx;
+  background: linear-gradient(135deg, #7B9EF5, #B8A0F5);
   border-radius: 40rpx;
+  box-shadow: 0 6rpx 20rpx rgba(123, 158, 245, 0.3);
+}
+
+.empty-btn-text {
   font-size: 28rpx;
+  color: #FFFFFF;
+  font-weight: 500;
 }
 
 /* 浮动按钮 */
@@ -486,20 +605,21 @@ export default {
   position: fixed;
   right: 40rpx;
   bottom: 200rpx;
-  width: 100rpx;
-  height: 100rpx;
-  background: linear-gradient(135deg, #7C9FF5, #B8A0F5);
+  width: 108rpx;
+  height: 108rpx;
+  background: linear-gradient(135deg, #7B9EF5, #B8A0F5);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 32rpx rgba(124, 159, 245, 0.4);
+  box-shadow: 0 8rpx 32rpx rgba(123, 158, 245, 0.45);
   z-index: 100;
 }
 
 .fab-icon {
-  font-size: 48rpx;
+  font-size: 52rpx;
   color: #FFFFFF;
   font-weight: 300;
+  line-height: 1;
 }
 </style>

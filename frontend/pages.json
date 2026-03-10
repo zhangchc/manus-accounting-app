@@ -4,9 +4,9 @@
       "path": "pages/index/index",
       "style": {
         "navigationBarTitleText": "轻记账",
-        "navigationBarBackgroundColor": "#F8F9FE",
+        "navigationBarBackgroundColor": "#FAFBFE",
         "navigationBarTextStyle": "black",
-        "backgroundColor": "#F8F9FE",
+        "backgroundColor": "#FAFBFE",
         "navigationStyle": "custom"
       }
     },
@@ -14,9 +14,9 @@
       "path": "pages/add/add",
       "style": {
         "navigationBarTitleText": "记一笔",
-        "navigationBarBackgroundColor": "#F8F9FE",
+        "navigationBarBackgroundColor": "#FAFBFE",
         "navigationBarTextStyle": "black",
-        "backgroundColor": "#F8F9FE",
+        "backgroundColor": "#FAFBFE",
         "navigationStyle": "custom"
       }
     },
@@ -24,9 +24,9 @@
       "path": "pages/statistics/statistics",
       "style": {
         "navigationBarTitleText": "统计",
-        "navigationBarBackgroundColor": "#F8F9FE",
+        "navigationBarBackgroundColor": "#FAFBFE",
         "navigationBarTextStyle": "black",
-        "backgroundColor": "#F8F9FE",
+        "backgroundColor": "#FAFBFE",
         "navigationStyle": "custom"
       }
     },
@@ -34,9 +34,9 @@
       "path": "pages/mine/mine",
       "style": {
         "navigationBarTitleText": "我的",
-        "navigationBarBackgroundColor": "#F8F9FE",
+        "navigationBarBackgroundColor": "#FAFBFE",
         "navigationBarTextStyle": "black",
-        "backgroundColor": "#F8F9FE",
+        "backgroundColor": "#FAFBFE",
         "navigationStyle": "custom"
       }
     },
@@ -44,7 +44,7 @@
       "path": "pages/bill/bill",
       "style": {
         "navigationBarTitleText": "账单",
-        "navigationBarBackgroundColor": "#F8F9FE",
+        "navigationBarBackgroundColor": "#FAFBFE",
         "navigationBarTextStyle": "black",
         "navigationStyle": "custom"
       }
@@ -53,7 +53,7 @@
       "path": "pages/budget/budget",
       "style": {
         "navigationBarTitleText": "预算设置",
-        "navigationBarBackgroundColor": "#F8F9FE",
+        "navigationBarBackgroundColor": "#FAFBFE",
         "navigationBarTextStyle": "black",
         "navigationStyle": "custom"
       }
@@ -62,13 +62,13 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "轻记账",
-    "navigationBarBackgroundColor": "#F8F9FE",
-    "backgroundColor": "#F8F9FE",
+    "navigationBarBackgroundColor": "#FAFBFE",
+    "backgroundColor": "#FAFBFE",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#7C9FF5",
+    "color": "#9CA3AF",
+    "selectedColor": "#7B9EF5",
     "borderStyle": "white",
     "backgroundColor": "#FFFFFF",
     "list": [
@@ -80,7 +80,7 @@
       },
       {
         "pagePath": "pages/add/add",
-        "text": "记账",
+        "text": "记一笔",
         "iconPath": "static/icons/add.png",
         "selectedIconPath": "static/icons/add-active.png"
       },

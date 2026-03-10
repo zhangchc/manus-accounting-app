@@ -57,7 +57,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         String openId = jsonObject.getStr("openid");
         if (openId == null || openId.isEmpty()) {
-            log.error("微信登录失败: {}", result);
+            log.error("微信登录失败: " + result);
             throw new BusinessException("微信登录失败");
         }
 

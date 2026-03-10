@@ -1,9 +1,29 @@
-/* 全局样式变量 - 简约清爽温馨风格 */
+/* 全局样式变量 - 蓝紫色主题 简约清爽温馨风格 */
 
-/* 主题色 */
-$primary-color: #7C9FF5;
+/* 主题色 - 蓝紫渐变 */
+$primary-color: #7B9EF5;
 $primary-light: #A8C0F7;
 $primary-dark: #5B82E0;
+$primary-purple: #B8A0F5;
+
+/* 渐变 */
+$gradient-primary: linear-gradient(135deg, #7B9EF5 0%, #A8C0F7 50%, #B8A0F5 100%);
+$gradient-btn: linear-gradient(135deg, #7B9EF5, #B8A0F5);
+
+/* 分类图标背景色 */
+$icon-bg-food: #FFF0ED;
+$icon-bg-transport: #E8F8F0;
+$icon-bg-shopping: #EBF2FF;
+$icon-bg-daily: #E8F8F0;
+$icon-bg-fruit: #FFE8EC;
+$icon-bg-snack: #FFF5E6;
+$icon-bg-sport: #E5F8F2;
+$icon-bg-entertainment: #F0EAFF;
+$icon-bg-communication: #EBF2FF;
+$icon-bg-clothing: #FFEEF5;
+$icon-bg-beauty: #FFE8F0;
+$icon-bg-housing: #FFF2E8;
+$icon-bg-salary: #FFF8E6;
 
 /* 温馨辅助色 */
 $warm-pink: #F5A0B5;
@@ -18,7 +38,7 @@ $text-hint: #9CA3AF;
 $text-white: #FFFFFF;
 
 /* 背景色 */
-$bg-page: #F8F9FE;
+$bg-page: #FAFBFE;
 $bg-card: #FFFFFF;
 $bg-input: #F3F4F8;
 
@@ -33,9 +53,9 @@ $border-radius-lg: 24rpx;
 $border-radius-xl: 32rpx;
 
 /* 阴影 */
-$shadow-sm: 0 2rpx 12rpx rgba(124, 159, 245, 0.08);
-$shadow-md: 0 4rpx 24rpx rgba(124, 159, 245, 0.12);
-$shadow-lg: 0 8rpx 40rpx rgba(124, 159, 245, 0.16);
+$shadow-sm: 0 2rpx 12rpx rgba(123, 158, 245, 0.08);
+$shadow-md: 0 4rpx 24rpx rgba(123, 158, 245, 0.12);
+$shadow-lg: 0 8rpx 40rpx rgba(123, 158, 245, 0.20);
 
 /* 间距 */
 $spacing-xs: 8rpx;

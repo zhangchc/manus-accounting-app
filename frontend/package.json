@@ -3,12 +3,6 @@
   "version": "1.0.0",
   "description": "轻记账 - 微信记账小程序",
   "main": "main.js",
-  "scripts": {
-    "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin",
-    "dev:h5": "uni",
-    "build:h5": "uni build"
-  },
   "dependencies": {},
   "devDependencies": {}
 }

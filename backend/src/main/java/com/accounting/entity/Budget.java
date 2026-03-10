@@ -25,8 +25,8 @@ public class Budget implements Serializable {
 
     private BigDecimal amount;
 
-    /** 年月 yyyy-MM，使用反引号避免 MySQL 保留字 year 导致语法错误 */
-    @TableField("`year_month`")
+    /** 年月，如 2025-03。MySQL 中 year 为保留字，需用反引号转义列名 */
+    @TableField(value = "`year_month`")
     private String yearMonth;
 
     @TableField(fill = FieldFill.INSERT)
