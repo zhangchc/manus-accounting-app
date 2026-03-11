@@ -1,0 +1,79 @@
+# =====================
+# 通用 / 系统文件
+# =====================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+
+# =====================
+# 后端 Backend (Java / Maven)
+# =====================
+backend/target/
+backend/*.iml
+backend/.idea/
+backend/.settings/
+backend/.project
+backend/.classpath
+backend/out/
+backend/*.jar
+backend/*.war
+backend/*.ear
+backend/*.class
+
+# Maven
+backend/pom.xml.tag
+backend/pom.xml.releaseBackup
+backend/release.properties
+backend/dependency-reduced-pom.xml
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+backend/logs/
+backend/*.log
+
+# 本地配置（含敏感信息可放这里，若需提交模板可改用 application-local.yml）
+# backend/src/main/resources/application-local.yml
+
+# =====================
+# 前端 Frontend (UniApp / Node)
+# =====================
+# 依赖
+frontend/node_modules/
+frontend/.pnpm-store/
+
+# UniApp 构建产物
+frontend/unpackage/
+frontend/dist/
+frontend/.sourcemap/
+
+# HBuilderX
+frontend/.hbuilderx/
+
+# 小程序开发工具
+frontend/.vscode/
+frontend/.idea/
+
+# npm / yarn / pnpm
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/.npm
+frontend/.yarn-integrity
+frontend/.pnpm-debug.log*
+
+# 环境与密钥（勿提交）
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# =====================
+# 其他
+# =====================
+*.zip
+*.tar.gz
+.attach
