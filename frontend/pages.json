@@ -66,6 +66,15 @@
         "navigationBarTextStyle": "black",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/ai-accounting/ai-accounting",
+      "style": {
+        "navigationBarTitleText": "AI记账",
+        "navigationBarBackgroundColor": "#FAFBFE",
+        "navigationBarTextStyle": "black",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

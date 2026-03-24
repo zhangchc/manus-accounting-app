@@ -96,15 +96,43 @@
     </view>
 
     <!-- 快捷记账按钮 -->
-    <view class="fab-btn" @click="goToAdd">
-      <text class="fab-icon">+</text>
+    <view class="fab-btn" @click="goToAiAccounting">
+      <text class="fab-icon">AI记账</text>
+    </view>
+
+    <!-- AI记账弹层：保留底部tabbar -->
+    <view class="ai-mask" v-if="showAiPanel" @click="closeAiPanel">
+      <view class="ai-panel" @click.stop>
+        <text class="ai-title">AI记账</text>
+        <textarea
+          v-model="aiText"
+          class="ai-input"
+          maxlength="120"
+          placeholder="请输入一句话，如：今天午餐花了38元"
+          placeholder-class="ai-placeholder"
+        />
+        <view class="ai-actions">
+          <view class="ai-btn ghost" @click="analyzeAiText">
+            <text class="ai-btn-text ghost-text">智能解析</text>
+          </view>
+          <view class="ai-btn main" @click="saveAiRecord">
+            <text class="ai-btn-text">一键入账</text>
+          </view>
+        </view>
+        <view class="ai-result" v-if="aiParsed">
+          <text class="ai-result-line">类型：{{ aiParsed.type === 1 ? '支出' : '收入' }}</text>
+          <text class="ai-result-line">金额：¥{{ formatMoney(aiParsed.amount) }}</text>
+          <text class="ai-result-line">分类：{{ aiParsed.categoryName }}</text>
+          <text class="ai-result-line">备注：{{ aiParsed.remark || '-' }}</text>
+        </view>
+      </view>
     </view>
   </view>
 </template>
 
 <script>
-import { getMonthBill, deleteRecord } from '../../api/index';
-import { formatMoney, getCurrentYearMonth, getCurrentDate } from '../../utils/util';
+import { getMonthBill, deleteRecord, getCategoryList, addRecord } from '../../api/index';
+import { formatMoney, getCurrentYearMonth, getCurrentDate, getCurrentTime } from '../../utils/util';
 import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
 
 export default {
@@ -119,7 +147,12 @@ export default {
       budget: 0,
       budgetRemain: 0,
       todayRecords: [],
-      userInfo: {}
+      userInfo: {},
+      showAiPanel: false,
+      aiText: '',
+      aiParsed: null,
+      aiExpenseCategories: [],
+      aiIncomeCategories: []
     };
   },
   computed: {
@@ -172,8 +205,11 @@ export default {
         this.budget = 0;
         this.budgetRemain = 0;
         this.todayRecords = [];
+        this.aiExpenseCategories = this.getDefaultCategories(1);
+        this.aiIncomeCategories = this.getDefaultCategories(2);
         return;
       }
+      this.prepareAiCategories();
       this.loadData();
     } catch (e) {
       console.error('登录未完成', e);
@@ -220,6 +256,90 @@ export default {
     },
     goToAdd() {
       uni.switchTab({ url: '/pages/add/add' });
+    },
+    goToAiAccounting() {
+      this.showAiPanel = true;
+      this.aiText = '';
+      this.aiParsed = null;
+      if (!this.aiExpenseCategories.length || !this.aiIncomeCategories.length) {
+        this.prepareAiCategories();
+      }
+    },
+    closeAiPanel() {
+      this.showAiPanel = false;
+    },
+    getDefaultCategories(type) {
+      const expenseNames = ['餐饮', '交通', '购物', '日用', '水果', '零食', '运动', '娱乐', '通讯', '服饰', '美容', '住房', '居家', '孩子', '长辈', '社交', '旅行', '宠物', '医疗', '学习', '其他'];
+      const incomeNames = ['工资', '奖金', '兼职', '理财', '红包', '转账', '退款', '其他'];
+      const names = type === 1 ? expenseNames : incomeNames;
+      return names.map((name, idx) => ({ id: type * 1000 + idx + 1, name, type }));
+    },
+    async prepareAiCategories() {
+      const loggedIn = !!uni.getStorageSync('token');
+      if (!loggedIn) {
+        this.aiExpenseCategories = this.getDefaultCategories(1);
+        this.aiIncomeCategories = this.getDefaultCategories(2);
+        return;
+      }
+      try {
+        const [expRes, incRes] = await Promise.all([getCategoryList(1), getCategoryList(2)]);
+        this.aiExpenseCategories = expRes.data?.length ? expRes.data : this.getDefaultCategories(1);
+        this.aiIncomeCategories = incRes.data?.length ? incRes.data : this.getDefaultCategories(2);
+      } catch (e) {
+        this.aiExpenseCategories = this.getDefaultCategories(1);
+        this.aiIncomeCategories = this.getDefaultCategories(2);
+      }
+    },
+    analyzeAiText() {
+      const text = (this.aiText || '').trim();
+      if (!text) {
+        uni.showToast({ title: '请先输入内容', icon: 'none' });
+        return;
+      }
+      const amountMatch = text.match(/(\d+(\.\d{1,2})?)/);
+      const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
+      if (!amount || amount <= 0) {
+        uni.showToast({ title: '未识别到有效金额', icon: 'none' });
+        return;
+      }
+      const isIncome = /(收入|工资|奖金|退款|红包|转账|理财|兼职|到账)/.test(text);
+      const type = isIncome ? 2 : 1;
+      const list = type === 1 ? this.aiExpenseCategories : this.aiIncomeCategories;
+      const hit = list.find(item => text.includes(item.name));
+      const category = hit || list.find(item => item.name === '其他') || list[0];
+      this.aiParsed = {
+        type,
+        amount,
+        categoryId: category?.id,
+        categoryName: category?.name || '其他',
+        remark: text.replace(/(\d+(\.\d{1,2})?)/, '').replace(/(元|块|人民币)/g, '').trim()
+      };
+    },
+    async saveAiRecord() {
+      if (!this.aiParsed) {
+        uni.showToast({ title: '请先解析内容', icon: 'none' });
+        return;
+      }
+      const loggedIn = !!uni.getStorageSync('token');
+      if (!loggedIn) {
+        uni.showToast({ title: '请先登录后再保存', icon: 'none' });
+        return;
+      }
+      try {
+        await addRecord({
+          categoryId: this.aiParsed.categoryId,
+          type: this.aiParsed.type,
+          amount: this.aiParsed.amount,
+          remark: this.aiParsed.remark,
+          recordDate: getCurrentDate(),
+          recordTime: getCurrentTime()
+        });
+        uni.showToast({ title: 'AI记账成功', icon: 'success' });
+        this.showAiPanel = false;
+        this.loadData();
+      } catch (e) {
+        uni.showToast({ title: '保存失败，请重试', icon: 'none' });
+      }
     },
     goToBill() {
       uni.navigateTo({ url: '/pages/bill/bill' });
@@ -614,8 +734,8 @@ export default {
   position: fixed;
   right: 40rpx;
   bottom: 200rpx;
-  width: 108rpx;
-  height: 108rpx;
+  width: 132rpx;
+  height: 132rpx;
   background: linear-gradient(135deg, #7B9EF5, #B8A0F5);
   border-radius: 50%;
   display: flex;
@@ -626,9 +746,102 @@ export default {
 }
 
 .fab-icon {
-  font-size: 52rpx;
+  font-size: 28rpx;
   color: #FFFFFF;
-  font-weight: 300;
+  font-weight: 600;
   line-height: 1;
+  letter-spacing: 1rpx;
+}
+
+.ai-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 150;
+  display: flex;
+  align-items: flex-end;
+}
+
+.ai-panel {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom));
+}
+
+.ai-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #2D3142;
+  margin-bottom: 18rpx;
+}
+
+.ai-input {
+  width: 100%;
+  min-height: 160rpx;
+  background: #F5F7FC;
+  border-radius: 18rpx;
+  padding: 16rpx 18rpx;
+  font-size: 28rpx;
+  color: #2D3142;
+}
+
+.ai-placeholder {
+  color: #B8BECC;
+}
+
+.ai-actions {
+  display: flex;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.ai-btn {
+  flex: 1;
+  height: 78rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-btn.ghost {
+  background: #EFF3FB;
+}
+
+.ai-btn.main {
+  background: linear-gradient(135deg, #7B9EF5, #B8A0F5);
+}
+
+.ai-btn-text {
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.ghost-text {
+  color: #6B7280;
+}
+
+.ai-result {
+  margin-top: 18rpx;
+  background: #F8FAFF;
+  border-radius: 16rpx;
+  padding: 14rpx 16rpx;
+}
+
+.ai-result-line {
+  display: block;
+  font-size: 24rpx;
+  color: #4B5563;
+  margin-bottom: 6rpx;
+}
+
+.ai-result-line:last-child {
+  margin-bottom: 0;
 }
 </style>
