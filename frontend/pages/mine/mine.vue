@@ -5,10 +5,11 @@
       <view :style="{ height: statusBarHeight + 'px' }"></view>
       <view class="profile-content">
         <view class="avatar-circle">
-          <text class="avatar-letter">{{ avatarText }}</text>
+          <image v-if="userInfo.avatarUrl" class="avatar-img" :src="userInfo.avatarUrl" mode="aspectFill"></image>
+          <text v-else class="avatar-letter">{{ avatarText }}</text>
         </view>
-        <text class="profile-name">{{ userInfo.nickName || '记账用户' }}</text>
-        <text class="profile-sign">记录生活，理清收支 ✨</text>
+        <text class="profile-name">{{ isLoggedIn ? (userInfo.nickName || '记账用户') : '未登录' }}</text>
+        <text class="profile-sign">{{ isLoggedIn ? '记录生活，理清收支 ✨' : '登录后可同步你的记账数据' }}</text>
       </view>
       <!-- 波浪底边 -->
       <view class="wave-bottom">
@@ -17,7 +18,7 @@
     </view>
 
     <!-- 年度总结卡片 -->
-    <view class="year-card">
+    <view class="year-card" v-if="isLoggedIn">
       <text class="year-title">{{ currentYear }}年度总结</text>
       <view class="year-data">
         <view class="year-item">
@@ -38,7 +39,14 @@
     </view>
 
     <!-- 功能菜单 -->
-    <view class="menu-card">
+    <view class="menu-card" v-if="isLoggedIn">
+      <view class="menu-item" @click="openEditProfile">
+        <view class="menu-left">
+          <text class="menu-icon">👤</text>
+          <text class="menu-name">编辑资料</text>
+        </view>
+        <text class="menu-arrow">›</text>
+      </view>
       <view class="menu-item" @click="goToBill">
         <view class="menu-left">
           <text class="menu-icon">📋</text>
@@ -77,25 +85,94 @@
     </view>
 
     <!-- 退出登录 -->
-    <view class="logout-btn" @click="logout">
+    <view class="logout-btn" v-if="isLoggedIn" @click="logout">
       <text class="logout-text">退出登录</text>
+    </view>
+
+    <!-- 登录入口（保持在“我的”tab中） -->
+    <view class="login-card" v-else>
+      <text class="login-title">登录后开启完整体验</text>
+      <text class="login-desc">请先授权头像并填写昵称</text>
+      <!-- #ifdef MP-WEIXIN -->
+      <button class="avatar-picker" open-type="chooseAvatar" @chooseavatar="onChooseAvatar">
+        <image v-if="loginForm.avatarUrl" class="avatar-preview" :src="loginForm.avatarUrl" mode="aspectFill"></image>
+        <text v-else class="avatar-picker-text">选择头像</text>
+      </button>
+      <input
+        class="nick-input"
+        type="nickname"
+        v-model="loginForm.nickName"
+        placeholder="请输入昵称"
+        placeholder-style="color:#B8BECC"
+      />
+      <!-- #endif -->
+      <view class="login-btn" @click="handleLogin">
+        <text class="login-btn-text">微信一键登录</text>
+      </view>
+    </view>
+
+    <!-- 编辑资料弹层 -->
+    <view class="edit-mask" v-if="showEditPanel" @click="closeEditProfile">
+      <view class="edit-panel" @click.stop>
+        <text class="edit-title">编辑资料</text>
+        <!-- #ifdef MP-WEIXIN -->
+        <button class="avatar-picker" open-type="chooseAvatar" @chooseavatar="onChooseEditAvatar">
+          <image v-if="editForm.avatarUrl" class="avatar-preview" :src="editForm.avatarUrl" mode="aspectFill"></image>
+          <text v-else class="avatar-picker-text">选择头像</text>
+        </button>
+        <input
+          class="nick-input"
+          type="nickname"
+          v-model="editForm.nickName"
+          placeholder="请输入昵称"
+          placeholder-style="color:#B8BECC"
+        />
+        <!-- #endif -->
+        <!-- #ifndef MP-WEIXIN -->
+        <input
+          class="nick-input"
+          v-model="editForm.nickName"
+          placeholder="请输入昵称"
+          placeholder-style="color:#B8BECC"
+        />
+        <!-- #endif -->
+        <view class="edit-actions">
+          <view class="action-btn cancel-btn" @click="closeEditProfile">
+            <text class="cancel-text">取消</text>
+          </view>
+          <view class="action-btn save-btn" @click="saveProfile">
+            <text class="save-text">{{ editSaving ? '保存中...' : '保存' }}</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 </template>
 
 <script>
-import { getUserInfo, getYearSummary } from '../../api/index';
+import { getUserInfo, getYearSummary, updateUserInfo } from '../../api/index';
 import { formatMoney } from '../../utils/util';
 
 export default {
   data() {
     return {
       statusBarHeight: 20,
+      isLoggedIn: false,
+      loginForm: {
+        nickName: '',
+        avatarUrl: ''
+      },
       userInfo: {},
       currentYear: new Date().getFullYear().toString(),
       yearIncome: 0,
       yearExpense: 0,
-      yearBalance: 0
+      yearBalance: 0,
+      showEditPanel: false,
+      editSaving: false,
+      editForm: {
+        nickName: '',
+        avatarUrl: ''
+      }
     };
   },
   computed: {
@@ -110,11 +187,27 @@ export default {
   },
   async onShow() {
     try {
-      await getApp().ensureLogin();
+      const loggedIn = await getApp().ensureLogin();
+      if (!loggedIn) {
+        this.isLoggedIn = false;
+        this.userInfo = {};
+        this.yearIncome = 0;
+        this.yearExpense = 0;
+        this.yearBalance = 0;
+        return;
+      }
+      this.isLoggedIn = true;
       this.loadUserInfo();
       this.loadYearSummary();
     } catch (e) {
-      console.error('登录未完成', e);
+      this.isLoggedIn = false;
+      this.userInfo = {};
+      this.yearIncome = 0;
+      this.yearExpense = 0;
+      this.yearBalance = 0;
+      if (e && e.message !== 'USER_LOGGED_OUT') {
+        console.error('登录未完成', e);
+      }
     }
   },
   methods: {
@@ -123,8 +216,47 @@ export default {
       try {
         const res = await getUserInfo();
         this.userInfo = res.data || {};
+        uni.setStorageSync('userInfo', this.userInfo);
       } catch (e) {
         console.error('加载用户信息失败', e);
+      }
+    },
+    openEditProfile() {
+      this.editForm.nickName = this.userInfo.nickName || '';
+      this.editForm.avatarUrl = this.userInfo.avatarUrl || '';
+      this.showEditPanel = true;
+    },
+    closeEditProfile() {
+      if (this.editSaving) return;
+      this.showEditPanel = false;
+    },
+    onChooseEditAvatar(e) {
+      const avatarUrl = e?.detail?.avatarUrl || '';
+      if (avatarUrl) {
+        this.editForm.avatarUrl = avatarUrl;
+      }
+    },
+    async saveProfile() {
+      if (this.editSaving) return;
+      const nickName = (this.editForm.nickName || '').trim();
+      if (!nickName) {
+        uni.showToast({ title: '请输入昵称', icon: 'none' });
+        return;
+      }
+      this.editSaving = true;
+      try {
+        await updateUserInfo({
+          nickName,
+          avatarUrl: this.editForm.avatarUrl || this.userInfo.avatarUrl || ''
+        });
+        await this.loadUserInfo();
+        this.showEditPanel = false;
+        uni.showToast({ title: '保存成功', icon: 'success' });
+      } catch (e) {
+        console.error('保存资料失败', e);
+        uni.showToast({ title: '保存失败，请重试', icon: 'none' });
+      } finally {
+        this.editSaving = false;
       }
     },
     async loadYearSummary() {
@@ -158,15 +290,61 @@ export default {
         confirmText: '知道了'
       });
     },
+    handleLogin() {
+      // #ifdef MP-WEIXIN
+      if (!this.loginForm.avatarUrl) {
+        uni.showToast({ title: '请先选择头像', icon: 'none' });
+        return;
+      }
+      if (!this.loginForm.nickName || !this.loginForm.nickName.trim()) {
+        uni.showToast({ title: '请输入昵称', icon: 'none' });
+        return;
+      }
+      getApp().relogin({
+        nickName: this.loginForm.nickName.trim(),
+        avatarUrl: this.loginForm.avatarUrl
+      }).then(() => {
+        this.isLoggedIn = true;
+        this.loginForm.nickName = '';
+        this.loginForm.avatarUrl = '';
+        this.loadUserInfo();
+        this.loadYearSummary();
+        uni.showToast({ title: '登录成功', icon: 'success' });
+      }).catch((e) => {
+        console.error('登录失败', e);
+        uni.showToast({ title: '登录失败，请重试', icon: 'none' });
+      });
+      // #endif
+      // #ifndef MP-WEIXIN
+      getApp().relogin().then(() => {
+        this.isLoggedIn = true;
+        this.loadUserInfo();
+        this.loadYearSummary();
+        uni.showToast({ title: '登录成功', icon: 'success' });
+      }).catch(() => {
+        uni.showToast({ title: '登录失败，请重试', icon: 'none' });
+      });
+      // #endif
+    },
+    onChooseAvatar(e) {
+      const avatarUrl = e?.detail?.avatarUrl || '';
+      if (avatarUrl) {
+        this.loginForm.avatarUrl = avatarUrl;
+      }
+    },
     logout() {
       uni.showModal({
         title: '提示',
         content: '确定退出登录吗？',
         success: (res) => {
           if (res.confirm) {
-            uni.removeStorageSync('token');
-            uni.removeStorageSync('userInfo');
-            uni.showToast({ title: '已退出' });
+            getApp().logout();
+            this.isLoggedIn = false;
+            this.userInfo = {};
+            this.yearIncome = 0;
+            this.yearExpense = 0;
+            this.yearBalance = 0;
+            uni.showToast({ title: '已退出', icon: 'success' });
           }
         }
       });
@@ -206,6 +384,12 @@ export default {
   align-items: center;
   justify-content: center;
   margin-bottom: 20rpx;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
 }
 
 .avatar-letter {
@@ -364,5 +548,142 @@ export default {
   font-size: 30rpx;
   color: #F5707A;
   font-weight: 500;
+}
+
+/* 登录卡片 */
+.login-card {
+  margin: 24rpx 32rpx;
+  padding: 36rpx 32rpx;
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(123, 158, 245, 0.12);
+}
+
+.login-title {
+  display: block;
+  font-size: 32rpx;
+  color: #2D3142;
+  font-weight: 600;
+}
+
+.login-desc {
+  display: block;
+  margin-top: 12rpx;
+  margin-bottom: 20rpx;
+  font-size: 26rpx;
+  color: #9CA3AF;
+}
+
+.avatar-picker {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  margin: 0 auto 20rpx;
+  background: #F2F4FA;
+  border: 2rpx solid #E5E9F5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.avatar-picker-text {
+  font-size: 24rpx;
+  color: #9CA3AF;
+}
+
+.nick-input {
+  width: 100%;
+  height: 84rpx;
+  border-radius: 18rpx;
+  background: #F5F7FC;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  color: #2D3142;
+  margin-bottom: 22rpx;
+}
+
+.login-btn {
+  height: 88rpx;
+  border-radius: 20rpx;
+  background: linear-gradient(135deg, #7B9EF5 0%, #B8A0F5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-btn-text {
+  font-size: 30rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.edit-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.edit-panel {
+  width: 100%;
+  background: #FFFFFF;
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 30rpx 32rpx 34rpx;
+}
+
+.edit-title {
+  display: block;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2D3142;
+  margin-bottom: 24rpx;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 84rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cancel-btn {
+  background: #F3F4F8;
+}
+
+.save-btn {
+  background: linear-gradient(135deg, #7B9EF5 0%, #B8A0F5 100%);
+}
+
+.cancel-text {
+  font-size: 28rpx;
+  color: #6B7280;
+  font-weight: 600;
+}
+
+.save-text {
+  font-size: 28rpx;
+  color: #FFFFFF;
+  font-weight: 600;
 }
 </style>

@@ -21,13 +21,16 @@ const request = (options) => {
         if (res.data.code === 200) {
           resolve(res.data);
         } else if (res.data.code === 401) {
-          // 未登录，跳转登录
+          // 未登录：清理本地登录态。手动退出场景不弹提示，页面保持空数据即可
           uni.removeStorageSync('token');
           uni.removeStorageSync('userInfo');
-          uni.showToast({
-            title: '请先登录',
-            icon: 'none'
-          });
+          const loggedOut = !!uni.getStorageSync('loggedOut');
+          if (!loggedOut) {
+            uni.showToast({
+              title: '请先登录',
+              icon: 'none'
+            });
+          }
           reject(res.data);
         } else {
           uni.showToast({

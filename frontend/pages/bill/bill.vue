@@ -108,7 +108,14 @@ export default {
     const sysInfo = uni.getSystemInfoSync();
     this.statusBarHeight = sysInfo.statusBarHeight || 20;
     try {
-      await getApp().ensureLogin();
+      const loggedIn = await getApp().ensureLogin();
+      if (!loggedIn) {
+        this.totalIncome = 0;
+        this.totalExpense = 0;
+        this.balance = 0;
+        this.dailyList = [];
+        return;
+      }
       this.loadData();
     } catch (e) {
       console.error('登录未完成', e);

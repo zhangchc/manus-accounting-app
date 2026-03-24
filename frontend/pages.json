@@ -57,6 +57,15 @@
         "navigationBarTextStyle": "black",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/login/login",
+      "style": {
+        "navigationBarTitleText": "登录",
+        "navigationBarBackgroundColor": "#FAFBFE",
+        "navigationBarTextStyle": "black",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

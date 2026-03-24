@@ -175,7 +175,12 @@ export default {
     const sysInfo = uni.getSystemInfoSync();
     this.statusBarHeight = sysInfo.statusBarHeight || 20;
     try {
-      await getApp().ensureLogin();
+      const loggedIn = await getApp().ensureLogin();
+      if (!loggedIn) {
+        this.totalBudget = 0;
+        this.monthExpense = 0;
+        return;
+      }
       this.loadData();
     } catch (e) {
       console.error('登录未完成', e);

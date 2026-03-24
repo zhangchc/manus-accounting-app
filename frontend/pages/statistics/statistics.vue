@@ -160,7 +160,15 @@ export default {
   },
   async onShow() {
     try {
-      await getApp().ensureLogin();
+      const loggedIn = await getApp().ensureLogin();
+      if (!loggedIn) {
+        this.totalIncome = 0;
+        this.totalExpense = 0;
+        this.categoryList = [];
+        this.trendList = [];
+        this.maxTrendAmount = 0;
+        return;
+      }
       this.loadData();
     } catch (e) {
       console.error('登录未完成', e);

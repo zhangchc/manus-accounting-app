@@ -2,8 +2,9 @@
 export default {
   onLaunch() {
     console.log('App Launch');
+    this.globalData.loggedOut = !!uni.getStorageSync('loggedOut');
     const token = uni.getStorageSync('token');
-    if (!token) {
+    if (!token && !this.globalData.loggedOut) {
       // 启动时即开始登录，各页通过 ensureLogin() 等待完成后再请求数据
       this.ensureLogin();
     }
@@ -13,7 +14,7 @@ export default {
      * 自动登录：小程序用 wx 的 code 调 wxLogin，其他用开发登录
      * @returns {Promise<void>}
      */
-    autoLogin() {
+    autoLogin(profile = {}) {
       // #ifdef MP-WEIXIN
       return new Promise((resolve, reject) => {
         uni.login({
@@ -26,11 +27,17 @@ export default {
             uni.request({
               url: this.globalData.baseUrl + '/user/wxLogin',
               method: 'POST',
-              data: { code: loginRes.code },
+              data: {
+                code: loginRes.code,
+                nickName: profile.nickName || '',
+                avatarUrl: profile.avatarUrl || ''
+              },
               success: (res) => {
                 if (res.data && res.data.code === 200 && res.data.data) {
                   uni.setStorageSync('token', res.data.data.token);
                   uni.setStorageSync('userInfo', res.data.data.userInfo || {});
+                  this.globalData.loggedOut = false;
+                  uni.removeStorageSync('loggedOut');
                   resolve();
                 } else {
                   reject(new Error(res.data?.message || '微信登录失败'));
@@ -57,6 +64,8 @@ export default {
             if (res.data && res.data.code === 200 && res.data.data) {
               uni.setStorageSync('token', res.data.data.token);
               uni.setStorageSync('userInfo', res.data.data.userInfo || {});
+              this.globalData.loggedOut = false;
+              uni.removeStorageSync('loggedOut');
               resolve();
             } else {
               reject(new Error(res.data?.message || '登录失败'));
@@ -72,19 +81,42 @@ export default {
      * 确保已登录：有 token 直接 resolve，否则执行并等待 autoLogin
      * 各页在请求前调用 await getApp().ensureLogin()
      */
-    ensureLogin() {
+    ensureLogin(force = false) {
       if (uni.getStorageSync('token')) {
-        return Promise.resolve();
+        return Promise.resolve(true);
+      }
+      if (this.globalData.loggedOut && !force) {
+        return Promise.resolve(false);
       }
       if (!this.globalData.loginPromise) {
-        this.globalData.loginPromise = this.autoLogin();
+        this.globalData.loginPromise = this.autoLogin().finally(() => {
+          this.globalData.loginPromise = null;
+        });
       }
+      return this.globalData.loginPromise
+        .then(() => true)
+        .catch(() => false);
+    },
+    logout() {
+      uni.removeStorageSync('token');
+      uni.removeStorageSync('userInfo');
+      uni.setStorageSync('loggedOut', true);
+      this.globalData.loggedOut = true;
+      this.globalData.loginPromise = null;
+    },
+    relogin(profile = {}) {
+      this.globalData.loggedOut = false;
+      uni.removeStorageSync('loggedOut');
+      this.globalData.loginPromise = this.autoLogin(profile).finally(() => {
+        this.globalData.loginPromise = null;
+      });
       return this.globalData.loginPromise;
     }
   },
   globalData: {
     baseUrl: 'http://localhost:8080/api',
-    loginPromise: null
+    loginPromise: null,
+    loggedOut: false
   }
 };
 </script>

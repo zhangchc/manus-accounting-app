@@ -164,7 +164,16 @@ export default {
   async onShow() {
     this.userInfo = uni.getStorageSync('userInfo') || {};
     try {
-      await getApp().ensureLogin();
+      const loggedIn = await getApp().ensureLogin();
+      if (!loggedIn) {
+        this.monthIncome = 0;
+        this.monthExpense = 0;
+        this.monthBalance = 0;
+        this.budget = 0;
+        this.budgetRemain = 0;
+        this.todayRecords = [];
+        return;
+      }
       this.loadData();
     } catch (e) {
       console.error('登录未完成', e);

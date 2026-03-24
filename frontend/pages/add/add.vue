@@ -34,7 +34,7 @@
             @click="selectCategory(item)"
           >
             <view class="category-icon-wrap" :style="{ background: getIconBgColor(item.name) }" :class="{ active: selectedCategory === item.id }">
-              <image class="category-icon-img" :src="getIconPath(item.name, item.type)" mode="aspectFit"></image>
+              <image class="category-icon-img" :src="getIconPath(item.name, item.type)" mode="scaleToFill"></image>
               <view class="category-check" v-if="selectedCategory === item.id">
                 <text class="check-icon">✓</text>
               </view>
@@ -155,10 +155,28 @@ export default {
       this.editId = parseInt(options.id);
     }
     try {
-      await getApp().ensureLogin();
-      this.loadCategories();
+      const loggedIn = await getApp().ensureLogin();
+      if (!loggedIn) {
+        this.applyDefaultCategories();
+        return;
+      }
+      await this.loadCategories();
     } catch (e) {
       console.error('登录未完成', e);
+      this.applyDefaultCategories();
+    }
+  },
+  async onShow() {
+    try {
+      const loggedIn = await getApp().ensureLogin();
+      if (!loggedIn) {
+        this.applyDefaultCategories();
+        return;
+      }
+      // 每次进入“记一笔”都尝试刷新分类，避免首次未登录后切回不刷新的问题
+      await this.loadCategories();
+    } catch (e) {
+      this.applyDefaultCategories();
     }
   },
   methods: {
@@ -171,6 +189,25 @@ export default {
     getIconBgColor(name) {
       return getCategoryBgColor(name);
     },
+    getDefaultCategories(type) {
+      const expenseNames = ['餐饮', '交通', '购物', '日用', '水果', '零食', '运动', '娱乐', '通讯', '服饰', '美容', '住房', '居家', '孩子', '长辈', '社交', '旅行', '宠物', '医疗', '学习', '其他'];
+      const incomeNames = ['工资', '奖金', '兼职', '理财', '红包', '转账', '退款', '其他'];
+      const names = type === 1 ? expenseNames : incomeNames;
+      return names.map((name, index) => ({
+        // 未登录或接口失败时使用前端兜底分类，避免页面空白
+        id: type * 1000 + index + 1,
+        name,
+        type
+      }));
+    },
+    applyDefaultCategories() {
+      this.expenseCategories = this.getDefaultCategories(1);
+      this.incomeCategories = this.getDefaultCategories(2);
+      this.categoryList = this.type === 1 ? this.expenseCategories : this.incomeCategories;
+      if (this.categoryList.length > 0 && !this.isEdit) {
+        this.selectedCategory = this.categoryList[0].id;
+      }
+    },
     async loadCategories() {
       try {
         const expRes = await getCategoryList(1);
@@ -178,6 +215,13 @@ export default {
         
         const incRes = await getCategoryList(2);
         this.incomeCategories = incRes.data || [];
+
+        if (this.expenseCategories.length === 0) {
+          this.expenseCategories = this.getDefaultCategories(1);
+        }
+        if (this.incomeCategories.length === 0) {
+          this.incomeCategories = this.getDefaultCategories(2);
+        }
         
         this.categoryList = this.type === 1 ? this.expenseCategories : this.incomeCategories;
         if (this.categoryList.length > 0 && !this.isEdit) {
@@ -185,6 +229,7 @@ export default {
         }
       } catch (e) {
         console.error('加载分类失败', e);
+        this.applyDefaultCategories();
       }
     },
     selectCategory(item) {
@@ -222,6 +267,11 @@ export default {
       this.amount = '';
     },
     async saveRecord() {
+      const loggedIn = !!uni.getStorageSync('token');
+      if (!loggedIn) {
+        uni.showToast({ title: '请先登录后再保存', icon: 'none' });
+        return;
+      }
       if (!this.amount || parseFloat(this.amount) <= 0) {
         uni.showToast({ title: '请输入金额', icon: 'none' });
         return;
@@ -360,12 +410,10 @@ export default {
   width: 108rpx;
   height: 108rpx;
   border-radius: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin-bottom: 10rpx;
   position: relative;
   border: 3rpx solid transparent;
+  overflow: hidden;
   transition: all 0.2s;
 }
 
@@ -374,9 +422,11 @@ export default {
   box-shadow: 0 4rpx 16rpx rgba(123, 158, 245, 0.2);
 }
 
+/* 图片按容器尺寸展示：容器多大就显示多大，不强制缩小 */
 .category-icon-img {
-  width: 56rpx;
-  height: 56rpx;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .category-check {
