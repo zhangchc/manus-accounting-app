@@ -95,6 +95,7 @@ public class AiAccountingServiceImpl implements AiAccountingService {
         if (!StringUtils.hasText(asrText)) {
             throw new BusinessException("未识别到有效语音内容");
         }
+        log.info("voiceAgent ASR finished. userId={}, wavFile={}, text={}", userId, savedWav, asrText.trim());
 
         try {
             ApplicationParam param = ApplicationParam.builder()
@@ -109,6 +110,7 @@ public class AiAccountingServiceImpl implements AiAccountingService {
             if (out == null || !StringUtils.hasText(out)) {
                 throw new BusinessException("Agent未返回有效内容");
             }
+            log.info("voiceAgent Agent returned. userId={}, wavFile={}, agentOut={}", userId, savedWav, out.trim());
             return mapAgentOutputToReply(out.trim());
         } catch (BusinessException e) {
             throw e;
@@ -155,6 +157,12 @@ public class AiAccountingServiceImpl implements AiAccountingService {
                     BigDecimal amount = parseAmount(obj.get("amount"));
                     if (amount == null) {
                         amount = parseAmount(obj.get("金额"));
+                    }
+                    if (amount == null) {
+                        amount = parseAmount(obj.get("money"));
+                    }
+                    if (amount == null) {
+                        amount = parseAmount(obj.get("price"));
                     }
                     item.setCategoryName(normalizeCategory(categoryName));
                     item.setAmount(amount);
