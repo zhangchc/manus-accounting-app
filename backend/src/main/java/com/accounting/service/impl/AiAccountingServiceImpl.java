@@ -80,6 +80,36 @@ public class AiAccountingServiceImpl implements AiAccountingService {
 
     @Override
     public AiAgentReplyVO voiceAgent(Long userId, MultipartFile audioFile) {
+        String traceId = buildTraceId();
+        long t0 = System.currentTimeMillis();
+
+        validateVoiceAgentRequest(userId, audioFile);
+
+        String savedWav = prepareAudioForAsr(traceId, userId, audioFile);
+        String asrText = asrToText(traceId, userId, savedWav);
+        String agentOut = callAgent(traceId, userId, savedWav, asrText);
+
+        AiAgentReplyVO reply = mapAgentOutputToReply(agentOut);
+        log.info("voiceAgent parsed. traceId={}, userId={}, wavFile={}, type={}, itemsCount={}, costMs={}",
+                traceId,
+                userId,
+                savedWav,
+                reply == null ? null : reply.getType(),
+                reply == null || reply.getItems() == null ? 0 : reply.getItems().size(),
+                System.currentTimeMillis() - t0);
+        return reply;
+    }
+
+    private String buildTraceId() {
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        String rnd = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        return ts + "_" + rnd;
+    }
+
+    private void validateVoiceAgentRequest(Long userId, MultipartFile audioFile) {
+        if (userId == null || userId <= 0) {
+            throw new BusinessException("用户信息异常");
+        }
         if (audioFile == null || audioFile.isEmpty()) {
             throw new BusinessException("语音文件不能为空");
         }
@@ -89,33 +119,61 @@ public class AiAccountingServiceImpl implements AiAccountingService {
         if (!StringUtils.hasText(bailianAgentAppId)) {
             throw new BusinessException("未配置百炼Agent应用ID");
         }
+    }
 
+    private String prepareAudioForAsr(String traceId, Long userId, MultipartFile audioFile) {
         String savedWav = saveVoiceFileForAsr(userId, audioFile, true);
+        if (!StringUtils.hasText(savedWav)) {
+            log.warn("voiceAgent save voice failed. traceId={}, userId={}", traceId, userId);
+            throw new BusinessException("语音文件保存失败");
+        }
+        return savedWav;
+    }
+
+    private String asrToText(String traceId, Long userId, String savedWav) {
+        long t0 = System.currentTimeMillis();
         String asrText = transcribeAudioLocalRealtime(savedWav);
-        if (!StringUtils.hasText(asrText)) {
+        String trimmed = asrText == null ? null : asrText.trim();
+        if (!StringUtils.hasText(trimmed)) {
+            log.warn("voiceAgent ASR empty. traceId={}, userId={}, wavFile={}, costMs={}",
+                    traceId, userId, savedWav, System.currentTimeMillis() - t0);
             throw new BusinessException("未识别到有效语音内容");
         }
-        log.info("voiceAgent ASR finished. userId={}, wavFile={}, text={}", userId, savedWav, asrText.trim());
+        log.info("voiceAgent ASR finished. traceId={}, userId={}, wavFile={}, text={}, costMs={}",
+                traceId, userId, savedWav, trimmed, System.currentTimeMillis() - t0);
+        return trimmed;
+    }
 
+    private String callAgent(String traceId, Long userId, String savedWav, String asrText) {
+        long t0 = System.currentTimeMillis();
         try {
             ApplicationParam param = ApplicationParam.builder()
                     .apiKey(bailianApiKey)
                     .appId(bailianAgentAppId)
-                    .prompt(asrText.trim())
+                    .prompt(asrText)
                     .incrementalOutput(false)
                     .build();
             Application app = new Application();
             ApplicationResult result = app.call(param);
             String out = (result == null || result.getOutput() == null) ? null : result.getOutput().getText();
-            if (out == null || !StringUtils.hasText(out)) {
+            if (!StringUtils.hasText(out)) {
+                log.warn("voiceAgent Agent empty. traceId={}, userId={}, wavFile={}, costMs={}",
+                        traceId, userId, savedWav, System.currentTimeMillis() - t0);
                 throw new BusinessException("Agent未返回有效内容");
             }
-            log.info("voiceAgent Agent returned. userId={}, wavFile={}, agentOut={}", userId, savedWav, out.trim());
-            return mapAgentOutputToReply(out.trim());
+            String trimmed = out == null ? null : out.trim();
+            if (!StringUtils.hasText(trimmed)) {
+                log.warn("voiceAgent Agent empty after trim. traceId={}, userId={}, wavFile={}, costMs={}",
+                        traceId, userId, savedWav, System.currentTimeMillis() - t0);
+                throw new BusinessException("Agent未返回有效内容");
+            }
+            log.info("voiceAgent Agent returned. traceId={}, userId={}, wavFile={}, agentOut={}, costMs={}",
+                    traceId, userId, savedWav, trimmed, System.currentTimeMillis() - t0);
+            return trimmed;
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            log.error("百炼Agent调用失败", e);
+            log.error("voiceAgent Agent call failed. traceId={}, userId={}, wavFile={}", traceId, userId, savedWav, e);
             throw new BusinessException("Agent调用失败");
         }
     }
