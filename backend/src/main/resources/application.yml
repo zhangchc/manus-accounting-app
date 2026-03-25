@@ -57,9 +57,9 @@ logging:
 # AI记账（阿里百炼）
 ai:
   bailian:
-    api-key: ${BAILIAN_API_KEY:}
+    api-key: sk-3a24e8acd3984b43971f0832fd6e0d70
     agent:
-      app-id: ${BAILIAN_AGENT_APP_ID:}
+      app-id: 61395759fd114661b8ae70378b5e196e
   asr:
     realtime-model: paraformer-realtime-v2
   debug:

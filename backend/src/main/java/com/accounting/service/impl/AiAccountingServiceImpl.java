@@ -14,7 +14,7 @@ import com.accounting.dto.RecordDTO;
 import com.accounting.entity.Record;
 import com.accounting.service.AiAccountingService;
 import com.accounting.service.RecordService;
-import com.accounting.vo.AiParseVO;
+import com.accounting.vo.AiAgentReplyVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,8 +34,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -60,31 +63,6 @@ public class AiAccountingServiceImpl implements AiAccountingService {
     private String debugVoiceDir;
 
     @Override
-    public AiParseVO parseText(Long userId, String text) {
-        if (!StringUtils.hasText(text)) {
-            throw new BusinessException("文本不能为空");
-        }
-        // 这里保留原先前端“智能解析”的返回结构：draft 由前端/或后续扩展生成
-        AiParseVO vo = new AiParseVO();
-        vo.setText(text);
-        vo.setDraft(null);
-        return vo;
-    }
-
-    @Override
-    public AiParseVO parseVoice(Long userId, MultipartFile audioFile) {
-        if (audioFile == null || audioFile.isEmpty()) {
-            throw new BusinessException("语音文件不能为空");
-        }
-        String savedWav = saveVoiceFileForAsr(userId, audioFile, true);
-        String text = transcribeAudioLocalRealtime(savedWav);
-        if (!StringUtils.hasText(text)) {
-            throw new BusinessException("未识别到有效语音内容");
-        }
-        return parseText(userId, text.trim());
-    }
-
-    @Override
     public Record confirmRecord(Long userId, AiConfirmRecordDTO dto) {
         RecordDTO recordDTO = new RecordDTO();
         recordDTO.setCategoryId(dto.getCategoryId());
@@ -101,7 +79,7 @@ public class AiAccountingServiceImpl implements AiAccountingService {
     }
 
     @Override
-    public String voiceAgent(Long userId, MultipartFile audioFile) {
+    public AiAgentReplyVO voiceAgent(Long userId, MultipartFile audioFile) {
         if (audioFile == null || audioFile.isEmpty()) {
             throw new BusinessException("语音文件不能为空");
         }
@@ -131,13 +109,256 @@ public class AiAccountingServiceImpl implements AiAccountingService {
             if (out == null || !StringUtils.hasText(out)) {
                 throw new BusinessException("Agent未返回有效内容");
             }
-            return out.trim();
+            return mapAgentOutputToReply(out.trim());
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
             log.error("百炼Agent调用失败", e);
             throw new BusinessException("Agent调用失败");
         }
+    }
+
+    private AiAgentReplyVO mapAgentOutputToReply(String agentText) {
+        AiAgentReplyVO vo = new AiAgentReplyVO();
+        if (!StringUtils.hasText(agentText)) {
+            vo.setType("chat");
+            vo.setDisplayText("");
+            return vo;
+        }
+
+        // 期望 agent 返回 JSON：{"result": "..."} / {"result2": {...}} / {"result3": "..."}
+        JSONObject root = null;
+        try {
+            root = JSONUtil.parseObj(agentText);
+        } catch (Exception ignore) {
+            // 非 JSON：按普通对话展示
+        }
+
+        if (root == null) {
+            vo.setType("chat");
+            vo.setDisplayText(agentText);
+            return vo;
+        }
+
+        if (root.containsKey("result2")) {
+            vo.setType("accounting");
+            Object r2 = root.get("result2");
+
+            List<JSONObject> objs = normalizeResult2ToObjectList(r2);
+            List<com.accounting.vo.AiAccountingItemVO> items = new ArrayList<>();
+
+            if (objs != null && !objs.isEmpty()) {
+                for (JSONObject obj : objs) {
+                    com.accounting.vo.AiAccountingItemVO item = new com.accounting.vo.AiAccountingItemVO();
+                    String categoryName = firstNonBlank(obj,
+                            "categoryName", "category", "类目", "分类", "category_name");
+                    BigDecimal amount = parseAmount(obj.get("amount"));
+                    if (amount == null) {
+                        amount = parseAmount(obj.get("金额"));
+                    }
+                    item.setCategoryName(normalizeCategory(categoryName));
+                    item.setAmount(amount);
+                    items.add(item);
+                }
+            } else {
+                // 允许 result2 是字符串：尝试抓“类目/金额”
+                if (r2 instanceof String) {
+                    String s = ((String) r2).trim();
+                    com.accounting.vo.AiAccountingItemVO item = new com.accounting.vo.AiAccountingItemVO();
+                    String categoryName = extractByLabel(s, "类目");
+                    if (!StringUtils.hasText(categoryName)) {
+                        categoryName = extractByLabel(s, "分类");
+                    }
+                    BigDecimal amount = extractAmountFromText(s);
+                    item.setCategoryName(normalizeCategory(categoryName));
+                    item.setAmount(amount);
+                    items.add(item);
+                }
+            }
+
+            // displayText：逐条展示即可，不做“一键入账”区的额外展示
+            vo.setItems(items);
+            if (items != null && !items.isEmpty()) {
+                vo.setCategoryName(items.get(0).getCategoryName());
+                vo.setAmount(items.get(0).getAmount());
+            }
+            vo.setDisplayText(buildAccountingDisplayText(items));
+            return vo;
+        }
+
+        if (root.containsKey("result3")) {
+            vo.setType("weather");
+            vo.setDisplayText(String.valueOf(root.get("result3")).trim());
+            return vo;
+        }
+
+        if (root.containsKey("result")) {
+            vo.setType("chat");
+            vo.setDisplayText(String.valueOf(root.get("result")).trim());
+            return vo;
+        }
+
+        // 兜底
+        vo.setType("chat");
+        vo.setDisplayText(agentText);
+        return vo;
+    }
+
+    private String firstNonBlank(JSONObject obj, String... keys) {
+        for (String k : keys) {
+            String v = obj.getStr(k);
+            if (StringUtils.hasText(v)) {
+                return v;
+            }
+        }
+        return null;
+    }
+
+    private BigDecimal parseAmount(Object val) {
+        if (val == null) {
+            return null;
+        }
+        try {
+            return new BigDecimal(String.valueOf(val));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String extractByLabel(String text, String label) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        int idx = text.indexOf(label);
+        if (idx < 0) {
+            return null;
+        }
+        // 形如：类目：餐饮，金额：12
+        int colon = text.indexOf("：", idx);
+        if (colon < 0) {
+            colon = text.indexOf(":", idx);
+        }
+        if (colon < 0) {
+            return null;
+        }
+        int end = text.indexOf("，", colon);
+        if (end < 0) {
+            end = text.indexOf(",", colon);
+        }
+        if (end < 0) {
+            end = text.length();
+        }
+        return text.substring(colon + 1, end).trim();
+    }
+
+    private BigDecimal extractAmountFromText(String text) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        String num = text.replaceAll("[^0-9.]", " ").trim();
+        if (!StringUtils.hasText(num)) {
+            return null;
+        }
+        String[] parts = num.split("\\s+");
+        for (String p : parts) {
+            if (p.matches("\\d+(\\.\\d{1,2})?")) {
+                try {
+                    return new BigDecimal(p);
+                } catch (Exception ignore) {
+                }
+            }
+        }
+        return null;
+    }
+
+    private String normalizeCategory(String categoryName) {
+        String safe = categoryName;
+        if (safe != null) {
+            safe = safe.trim();
+        }
+        return StringUtils.hasText(safe) ? safe : "未知";
+    }
+
+    private String buildAccountingDisplayText(List<com.accounting.vo.AiAccountingItemVO> items) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("小主！你要记录的账目如下：");
+        if (items == null || items.isEmpty()) {
+            return sb.append("\n（1）类目：未知，金额：未知").toString();
+        }
+        int idx = 1;
+        for (com.accounting.vo.AiAccountingItemVO it : items) {
+            String cat = it == null ? null : it.getCategoryName();
+            BigDecimal amt = it == null ? null : it.getAmount();
+            String amtText = amt == null ? "未知" : amt.stripTrailingZeros().toPlainString();
+            sb.append("\n（").append(idx).append("）类目：")
+                    .append(StringUtils.hasText(cat) ? cat : "未知")
+                    .append("，金额：").append(amtText);
+            idx++;
+        }
+        return sb.toString();
+    }
+
+    private List<JSONObject> normalizeResult2ToObjectList(Object r2) {
+        if (r2 == null) {
+            return null;
+        }
+        List<JSONObject> out = new ArrayList<>();
+
+        if (r2 instanceof JSONArray) {
+            JSONArray arr = (JSONArray) r2;
+            for (Object el : arr) {
+                try {
+                    out.add(JSONUtil.parseObj(el));
+                } catch (Exception ignore) {
+                }
+            }
+            return out;
+        }
+
+        if (r2 instanceof JSONObject) {
+            JSONObject obj = (JSONObject) r2;
+            Object items = obj.get("items");
+            if (items instanceof JSONArray) {
+                JSONArray arr = (JSONArray) items;
+                for (Object el : arr) {
+                    try {
+                        out.add(JSONUtil.parseObj(el));
+                    } catch (Exception ignore) {
+                    }
+                }
+                return out;
+            }
+            // 单条对象
+            out.add(obj);
+            return out;
+        }
+
+        if (r2 instanceof String) {
+            String s = ((String) r2).trim();
+            try {
+                // 字符串数组
+                JSONArray arr = JSONUtil.parseArray(s);
+                for (Object el : arr) {
+                    try {
+                        out.add(JSONUtil.parseObj(el));
+                    } catch (Exception ignore) {
+                    }
+                }
+                if (!out.isEmpty()) {
+                    return out;
+                }
+            } catch (Exception ignore) {
+            }
+            try {
+                // 字符串对象
+                JSONObject obj = JSONUtil.parseObj(s);
+                out.add(obj);
+                return out;
+            } catch (Exception ignore) {
+            }
+        }
+
+        return null;
     }
 
     // 包内可见：便于你用 Spring 容器写 JUnit 直接调试
@@ -170,7 +391,9 @@ public class AiAccountingServiceImpl implements AiAccountingService {
     }
 
     static String extractFinalTextFromRecognitionJson(String rawJson) {
-        if (!StringUtils.hasText(rawJson)) return null;
+        if (!StringUtils.hasText(rawJson)) {
+            return null;
+        }
         JSONObject root;
         try {
             root = JSONUtil.parseObj(rawJson);
@@ -178,7 +401,9 @@ public class AiAccountingServiceImpl implements AiAccountingService {
             return null;
         }
         JSONArray sentences = root.getJSONArray("sentences");
-        if (sentences == null || sentences.isEmpty()) return null;
+        if (sentences == null || sentences.isEmpty()) {
+            return null;
+        }
 
         Map<Integer, String> finals = new LinkedHashMap<>();
         for (Object el : sentences) {
@@ -188,18 +413,24 @@ public class AiAccountingServiceImpl implements AiAccountingService {
             } catch (Exception ignore) {
                 continue;
             }
-            if (!s.getBool("sentence_end", false)) continue;
+            if (!s.getBool("sentence_end", false)) {
+                continue;
+            }
             Integer id = s.getInt("sentence_id", -1);
             String t = s.getStr("text", "").trim();
             if (id != null && id >= 0 && StringUtils.hasText(t)) {
                 finals.put(id, t);
             }
         }
-        if (finals.isEmpty()) return null;
+        if (finals.isEmpty()) {
+            return null;
+        }
 
         StringBuilder sb = new StringBuilder();
         for (String t : finals.values()) {
-            if (!StringUtils.hasText(t)) continue;
+            if (!StringUtils.hasText(t)) {
+                continue;
+            }
             sb.append(t);
         }
         String out = sb.toString().trim();
