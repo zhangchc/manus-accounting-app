@@ -53,3 +53,15 @@ jwt:
 logging:
   level:
     com.accounting: debug
+
+# AI记账（阿里百炼）
+ai:
+  bailian:
+    api-key: ${BAILIAN_API_KEY:}
+    agent:
+      app-id: ${BAILIAN_AGENT_APP_ID:}
+  asr:
+    realtime-model: paraformer-realtime-v2
+  debug:
+    save-voice: true
+    voice-dir: backend/debug-audio

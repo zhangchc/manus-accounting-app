@@ -104,6 +104,16 @@
     <view class="ai-mask" v-if="showAiPanel" @click="closeAiPanel">
       <view class="ai-panel" @click.stop>
         <text class="ai-title">AI记账</text>
+        <view class="press-area"
+              :class="{ recording: isRecording }"
+              @touchstart="startPressTalk"
+              @touchmove="onPressMove"
+              @touchend="stopPressTalk"
+              @touchcancel="stopPressTalk">
+          <text class="press-text">{{ isRecording ? (aiWillCancel ? '松开取消' : '松开发送') : '按住说话' }}</text>
+        </view>
+        <text class="ai-tip">{{ aiRecordSeconds > 0 ? ('已录音 ' + aiRecordSeconds + ' 秒') : aiVoiceTip }}</text>
+        <text class="ai-cancel-tip" v-if="isRecording && aiWillCancel">松开将取消发送</text>
         <textarea
           v-model="aiText"
           class="ai-input"
@@ -152,7 +162,17 @@ export default {
       aiText: '',
       aiParsed: null,
       aiExpenseCategories: [],
-      aiIncomeCategories: []
+      aiIncomeCategories: [],
+
+      // 语音录入
+      isRecording: false,
+      aiVoiceTip: '请按住按钮开始说话',
+      aiTouchStartY: 0,
+      aiWillCancel: false,
+      aiCancelled: false,
+      aiRecordSeconds: 0,
+      aiRecordTimer: null,
+      aiRecorderManager: null
     };
   },
   computed: {
@@ -218,6 +238,26 @@ export default {
   onLoad() {
     const sysInfo = uni.getSystemInfoSync();
     this.statusBarHeight = sysInfo.statusBarHeight || 20;
+
+    // #ifdef MP-WEIXIN
+    this.aiRecorderManager = uni.getRecorderManager();
+    this.aiRecorderManager.onStop((res) => {
+      if (this.aiCancelled) {
+        this.aiVoiceTip = '已取消';
+        this.aiCancelled = false;
+        return;
+      }
+      this.handleAiVoiceFile(res.tempFilePath);
+    });
+    this.aiRecorderManager.onError(() => {
+      this.isRecording = false;
+      this.stopAiTimer();
+      this.aiVoiceTip = '录音失败，请重试';
+    });
+    // #endif
+  },
+  onUnload() {
+    this.stopAiTimer();
   },
   methods: {
     formatMoney,
@@ -267,6 +307,10 @@ export default {
     },
     closeAiPanel() {
       this.showAiPanel = false;
+      this.stopAiTimer();
+      this.isRecording = false;
+      this.aiWillCancel = false;
+      this.aiTouchStartY = 0;
     },
     getDefaultCategories(type) {
       const expenseNames = ['餐饮', '交通', '购物', '日用', '水果', '零食', '运动', '娱乐', '通讯', '服饰', '美容', '住房', '居家', '孩子', '长辈', '社交', '旅行', '宠物', '医疗', '学习', '其他'];
@@ -289,6 +333,108 @@ export default {
         this.aiExpenseCategories = this.getDefaultCategories(1);
         this.aiIncomeCategories = this.getDefaultCategories(2);
       }
+    },
+
+    startAiTimer() {
+      this.stopAiTimer();
+      this.aiRecordSeconds = 0;
+      this.aiRecordTimer = setInterval(() => {
+        this.aiRecordSeconds += 1;
+      }, 1000);
+    },
+    stopAiTimer() {
+      if (this.aiRecordTimer) {
+        clearInterval(this.aiRecordTimer);
+        this.aiRecordTimer = null;
+      }
+      this.aiRecordSeconds = 0;
+    },
+    startPressTalk() {
+      // #ifdef MP-WEIXIN
+      if (!this.aiRecorderManager) {
+        this.aiVoiceTip = '录音器初始化失败';
+        return;
+      }
+      const token = uni.getStorageSync('token');
+      if (!token) {
+        this.aiVoiceTip = '请先登录后使用语音记账';
+        return;
+      }
+      this.isRecording = true;
+      this.aiWillCancel = false;
+      this.aiCancelled = false;
+      this.aiTouchStartY = 0;
+      this.aiVoiceTip = '录音中... 松开后自动识别';
+      this.startAiTimer();
+      this.aiRecorderManager.start({
+        duration: 60000,
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 48000,
+        format: 'mp3'
+      });
+      // #endif
+      // #ifndef MP-WEIXIN
+      this.aiVoiceTip = '仅微信小程序支持按住说话';
+      // #endif
+    },
+    onPressMove(e) {
+      if (!this.isRecording) return;
+      const y = e.touches && e.touches[0] ? e.touches[0].clientY : 0;
+      if (!this.aiTouchStartY) {
+        this.aiTouchStartY = y;
+        return;
+      }
+      this.aiWillCancel = (this.aiTouchStartY - y) > 60;
+    },
+    stopPressTalk() {
+      // #ifdef MP-WEIXIN
+      if (!this.isRecording || !this.aiRecorderManager) return;
+      if (this.aiWillCancel) {
+        this.aiCancelled = true;
+      }
+      this.aiRecorderManager.stop();
+      this.isRecording = false;
+      this.stopAiTimer();
+      this.aiVoiceTip = this.aiCancelled ? '已取消' : '识别中...';
+      this.aiWillCancel = false;
+      this.aiTouchStartY = 0;
+      // #endif
+    },
+    handleAiVoiceFile(filePath) {
+      const token = uni.getStorageSync('token');
+      if (!token) {
+        this.aiVoiceTip = '请先登录后使用语音记账';
+        return;
+      }
+      uni.uploadFile({
+        url: getApp().globalData.baseUrl + '/ai-accounting/voice-agent',
+        filePath,
+        name: 'audio',
+        header: {
+          Authorization: 'Bearer ' + token
+        },
+        success: (uploadRes) => {
+          try {
+            const data = JSON.parse(uploadRes.data || '{}');
+            if (data.code === 200) {
+              this.aiText = (data.data || '').trim();
+              this.aiParsed = null;
+              this.aiVoiceTip = this.aiText ? '识别成功' : '未返回内容';
+            } else {
+              this.aiVoiceTip = data.message || '识别失败';
+              uni.showToast({ title: this.aiVoiceTip, icon: 'none' });
+            }
+          } catch (e) {
+            this.aiVoiceTip = '语音解析失败';
+            uni.showToast({ title: this.aiVoiceTip, icon: 'none' });
+          }
+        },
+        fail: () => {
+          this.aiVoiceTip = '上传失败，请重试';
+          uni.showToast({ title: this.aiVoiceTip, icon: 'none' });
+        }
+      });
     },
     analyzeAiText() {
       const text = (this.aiText || '').trim();
@@ -778,6 +924,43 @@ export default {
   font-weight: 700;
   color: #2D3142;
   margin-bottom: 18rpx;
+}
+
+.press-area {
+  width: 100%;
+  height: 88rpx;
+  border-radius: 18rpx;
+  background: #F5F7FC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14rpx;
+  border: 2rpx solid rgba(123, 158, 245, 0.15);
+}
+
+.press-area.recording {
+  background: linear-gradient(135deg, rgba(123, 158, 245, 0.18), rgba(184, 160, 245, 0.18));
+  border-color: rgba(123, 158, 245, 0.45);
+}
+
+.press-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2D3142;
+}
+
+.ai-tip {
+  display: block;
+  font-size: 24rpx;
+  color: #6B7280;
+  margin-bottom: 10rpx;
+}
+
+.ai-cancel-tip {
+  display: block;
+  font-size: 24rpx;
+  color: #EF4444;
+  margin-bottom: 10rpx;
 }
 
 .ai-input {
