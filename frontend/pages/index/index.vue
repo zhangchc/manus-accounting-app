@@ -97,13 +97,13 @@
 
     <!-- 快捷记账按钮 -->
     <view class="fab-btn" @click="goToAiAccounting">
-      <text class="fab-icon">AI记账</text>
+      <text class="fab-icon">嗖记账</text>
     </view>
 
-    <!-- AI记账弹层：保留底部tabbar -->
+    <!-- 嗖记账弹层：保留底部tabbar -->
     <view class="ai-mask" v-if="showAiPanel" @click="closeAiPanel">
       <view class="ai-panel" @click.stop>
-        <text class="ai-title">AI记账</text>
+        <text class="ai-title">嗖记账</text>
         <view class="press-area"
               :class="{ recording: isRecording }"
               @touchstart="startPressTalk"
@@ -122,9 +122,6 @@
           placeholder-class="ai-placeholder"
         />
         <view class="ai-actions">
-          <view class="ai-btn ghost" @click="analyzeAiText">
-            <text class="ai-btn-text ghost-text">智能解析</text>
-          </view>
           <view class="ai-btn main" @click="saveAiRecord">
             <text class="ai-btn-text">一键入账</text>
           </view>
@@ -418,9 +415,13 @@ export default {
           try {
             const data = JSON.parse(uploadRes.data || '{}');
             if (data.code === 200) {
-              this.aiText = (data.data || '').trim();
+              const reply = data.data || {};
+              const displayText = (reply.displayText || '').trim();
+              this.aiVoiceTip = displayText ? '识别成功' : '未返回内容';
+
+              // 直接展示对话框文案即可（语音记账多条也只做逐条文本展示）
+              this.aiText = displayText;
               this.aiParsed = null;
-              this.aiVoiceTip = this.aiText ? '识别成功' : '未返回内容';
             } else {
               this.aiVoiceTip = data.message || '识别失败';
               uni.showToast({ title: this.aiVoiceTip, icon: 'none' });
@@ -436,35 +437,33 @@ export default {
         }
       });
     },
-    analyzeAiText() {
-      const text = (this.aiText || '').trim();
-      if (!text) {
-        uni.showToast({ title: '请先输入内容', icon: 'none' });
-        return;
-      }
-      const amountMatch = text.match(/(\d+(\.\d{1,2})?)/);
-      const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
-      if (!amount || amount <= 0) {
-        uni.showToast({ title: '未识别到有效金额', icon: 'none' });
-        return;
-      }
-      const isIncome = /(收入|工资|奖金|退款|红包|转账|理财|兼职|到账)/.test(text);
-      const type = isIncome ? 2 : 1;
-      const list = type === 1 ? this.aiExpenseCategories : this.aiIncomeCategories;
-      const hit = list.find(item => text.includes(item.name));
-      const category = hit || list.find(item => item.name === '其他') || list[0];
-      this.aiParsed = {
-        type,
-        amount,
-        categoryId: category?.id,
-        categoryName: category?.name || '其他',
-        remark: text.replace(/(\d+(\.\d{1,2})?)/, '').replace(/(元|块|人民币)/g, '').trim()
-      };
-    },
+    
     async saveAiRecord() {
+      // 自动解析一次（不提供“智能解析”按钮）
       if (!this.aiParsed) {
-        uni.showToast({ title: '请先解析内容', icon: 'none' });
-        return;
+        const text = (this.aiText || '').trim();
+        if (!text) {
+          uni.showToast({ title: '请先输入内容', icon: 'none' });
+          return;
+        }
+        const amountMatch = text.match(/(\d+(\.\d{1,2})?)/);
+        const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
+        if (!amount || amount <= 0) {
+          uni.showToast({ title: '未识别到有效金额', icon: 'none' });
+          return;
+        }
+        const isIncome = /(收入|工资|奖金|退款|红包|转账|理财|兼职|到账)/.test(text);
+        const type = isIncome ? 2 : 1;
+        const list = type === 1 ? this.aiExpenseCategories : this.aiIncomeCategories;
+        const hit = list.find(item => text.includes(item.name));
+        const category = hit || list.find(item => item.name === '其他') || list[0];
+        this.aiParsed = {
+          type,
+          amount,
+          categoryId: category?.id,
+          categoryName: category?.name || '其他',
+          remark: text.replace(/(\d+(\.\d{1,2})?)/, '').replace(/(元|块|人民币)/g, '').trim()
+        };
       }
       const loggedIn = !!uni.getStorageSync('token');
       if (!loggedIn) {
@@ -480,7 +479,7 @@ export default {
           recordDate: getCurrentDate(),
           recordTime: getCurrentTime()
         });
-        uni.showToast({ title: 'AI记账成功', icon: 'success' });
+        uni.showToast({ title: '嗖记账成功', icon: 'success' });
         this.showAiPanel = false;
         this.loadData();
       } catch (e) {

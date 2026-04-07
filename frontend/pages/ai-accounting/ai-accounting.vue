@@ -145,7 +145,7 @@ export default {
           recordDate: getCurrentDate(),
           recordTime: getCurrentTime()
         });
-        uni.showToast({ title: 'AI记账成功', icon: 'success' });
+        uni.showToast({ title: '嗖记账成功', icon: 'success' });
         setTimeout(() => {
           uni.navigateBack();
         }, 400);
