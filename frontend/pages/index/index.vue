@@ -95,51 +95,17 @@
       </view>
     </view>
 
-    <!-- 快捷记账按钮 -->
-    <view class="fab-btn" @click="goToAiAccounting">
-      <text class="fab-icon">嗖记账</text>
+    <!-- 快捷记账按钮：保留入口，点击跳转“记一笔” -->
+    <view class="fab-btn" @click="goToAdd">
+      <text class="fab-icon">+</text>
     </view>
 
-    <!-- 嗖记账弹层：保留底部tabbar -->
-    <view class="ai-mask" v-if="showAiPanel" @click="closeAiPanel">
-      <view class="ai-panel" @click.stop>
-        <text class="ai-title">嗖记账</text>
-        <view class="press-area"
-              :class="{ recording: isRecording }"
-              @touchstart="startPressTalk"
-              @touchmove="onPressMove"
-              @touchend="stopPressTalk"
-              @touchcancel="stopPressTalk">
-          <text class="press-text">{{ isRecording ? (aiWillCancel ? '松开取消' : '松开发送') : '按住说话' }}</text>
-        </view>
-        <text class="ai-tip">{{ aiRecordSeconds > 0 ? ('已录音 ' + aiRecordSeconds + ' 秒') : aiVoiceTip }}</text>
-        <text class="ai-cancel-tip" v-if="isRecording && aiWillCancel">松开将取消发送</text>
-        <textarea
-          v-model="aiText"
-          class="ai-input"
-          maxlength="120"
-          placeholder="请输入一句话，如：今天午餐花了38元"
-          placeholder-class="ai-placeholder"
-        />
-        <view class="ai-actions">
-          <view class="ai-btn main" @click="saveAiRecord">
-            <text class="ai-btn-text">一键入账</text>
-          </view>
-        </view>
-        <view class="ai-result" v-if="aiParsed">
-          <text class="ai-result-line">类型：{{ aiParsed.type === 1 ? '支出' : '收入' }}</text>
-          <text class="ai-result-line">金额：¥{{ formatMoney(aiParsed.amount) }}</text>
-          <text class="ai-result-line">分类：{{ aiParsed.categoryName }}</text>
-          <text class="ai-result-line">备注：{{ aiParsed.remark || '-' }}</text>
-        </view>
-      </view>
-    </view>
   </view>
 </template>
 
 <script>
-import { getMonthBill, deleteRecord, getCategoryList, addRecord } from '../../api/index';
-import { formatMoney, getCurrentYearMonth, getCurrentDate, getCurrentTime } from '../../utils/util';
+import { getMonthBill, deleteRecord } from '../../api/index';
+import { formatMoney, getCurrentYearMonth, getCurrentDate } from '../../utils/util';
 import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
 
 export default {
@@ -154,22 +120,7 @@ export default {
       budget: 0,
       budgetRemain: 0,
       todayRecords: [],
-      userInfo: {},
-      showAiPanel: false,
-      aiText: '',
-      aiParsed: null,
-      aiExpenseCategories: [],
-      aiIncomeCategories: [],
-
-      // 语音录入
-      isRecording: false,
-      aiVoiceTip: '请按住按钮开始说话',
-      aiTouchStartY: 0,
-      aiWillCancel: false,
-      aiCancelled: false,
-      aiRecordSeconds: 0,
-      aiRecordTimer: null,
-      aiRecorderManager: null
+      userInfo: {}
     };
   },
   computed: {
@@ -222,11 +173,8 @@ export default {
         this.budget = 0;
         this.budgetRemain = 0;
         this.todayRecords = [];
-        this.aiExpenseCategories = this.getDefaultCategories(1);
-        this.aiIncomeCategories = this.getDefaultCategories(2);
         return;
       }
-      this.prepareAiCategories();
       this.loadData();
     } catch (e) {
       console.error('登录未完成', e);
@@ -235,26 +183,6 @@ export default {
   onLoad() {
     const sysInfo = uni.getSystemInfoSync();
     this.statusBarHeight = sysInfo.statusBarHeight || 20;
-
-    // #ifdef MP-WEIXIN
-    this.aiRecorderManager = uni.getRecorderManager();
-    this.aiRecorderManager.onStop((res) => {
-      if (this.aiCancelled) {
-        this.aiVoiceTip = '已取消';
-        this.aiCancelled = false;
-        return;
-      }
-      this.handleAiVoiceFile(res.tempFilePath);
-    });
-    this.aiRecorderManager.onError(() => {
-      this.isRecording = false;
-      this.stopAiTimer();
-      this.aiVoiceTip = '录音失败，请重试';
-    });
-    // #endif
-  },
-  onUnload() {
-    this.stopAiTimer();
   },
   methods: {
     formatMoney,
@@ -293,198 +221,6 @@ export default {
     },
     goToAdd() {
       uni.switchTab({ url: '/pages/add/add' });
-    },
-    goToAiAccounting() {
-      this.showAiPanel = true;
-      this.aiText = '';
-      this.aiParsed = null;
-      if (!this.aiExpenseCategories.length || !this.aiIncomeCategories.length) {
-        this.prepareAiCategories();
-      }
-    },
-    closeAiPanel() {
-      this.showAiPanel = false;
-      this.stopAiTimer();
-      this.isRecording = false;
-      this.aiWillCancel = false;
-      this.aiTouchStartY = 0;
-    },
-    getDefaultCategories(type) {
-      const expenseNames = ['餐饮', '交通', '购物', '日用', '水果', '零食', '运动', '娱乐', '通讯', '服饰', '美容', '住房', '居家', '孩子', '长辈', '社交', '旅行', '宠物', '医疗', '学习', '其他'];
-      const incomeNames = ['工资', '奖金', '兼职', '理财', '红包', '转账', '退款', '其他'];
-      const names = type === 1 ? expenseNames : incomeNames;
-      return names.map((name, idx) => ({ id: type * 1000 + idx + 1, name, type }));
-    },
-    async prepareAiCategories() {
-      const loggedIn = !!uni.getStorageSync('token');
-      if (!loggedIn) {
-        this.aiExpenseCategories = this.getDefaultCategories(1);
-        this.aiIncomeCategories = this.getDefaultCategories(2);
-        return;
-      }
-      try {
-        const [expRes, incRes] = await Promise.all([getCategoryList(1), getCategoryList(2)]);
-        this.aiExpenseCategories = expRes.data?.length ? expRes.data : this.getDefaultCategories(1);
-        this.aiIncomeCategories = incRes.data?.length ? incRes.data : this.getDefaultCategories(2);
-      } catch (e) {
-        this.aiExpenseCategories = this.getDefaultCategories(1);
-        this.aiIncomeCategories = this.getDefaultCategories(2);
-      }
-    },
-
-    startAiTimer() {
-      this.stopAiTimer();
-      this.aiRecordSeconds = 0;
-      this.aiRecordTimer = setInterval(() => {
-        this.aiRecordSeconds += 1;
-      }, 1000);
-    },
-    stopAiTimer() {
-      if (this.aiRecordTimer) {
-        clearInterval(this.aiRecordTimer);
-        this.aiRecordTimer = null;
-      }
-      this.aiRecordSeconds = 0;
-    },
-    startPressTalk() {
-      // #ifdef MP-WEIXIN
-      if (!this.aiRecorderManager) {
-        this.aiVoiceTip = '录音器初始化失败';
-        return;
-      }
-      const token = uni.getStorageSync('token');
-      if (!token) {
-        this.aiVoiceTip = '请先登录后使用语音记账';
-        return;
-      }
-      this.isRecording = true;
-      this.aiWillCancel = false;
-      this.aiCancelled = false;
-      this.aiTouchStartY = 0;
-      this.aiVoiceTip = '录音中... 松开后自动识别';
-      this.startAiTimer();
-      this.aiRecorderManager.start({
-        duration: 60000,
-        sampleRate: 16000,
-        numberOfChannels: 1,
-        encodeBitRate: 48000,
-        format: 'mp3'
-      });
-      // #endif
-      // #ifndef MP-WEIXIN
-      this.aiVoiceTip = '仅微信小程序支持按住说话';
-      // #endif
-    },
-    onPressMove(e) {
-      if (!this.isRecording) return;
-      const y = e.touches && e.touches[0] ? e.touches[0].clientY : 0;
-      if (!this.aiTouchStartY) {
-        this.aiTouchStartY = y;
-        return;
-      }
-      this.aiWillCancel = (this.aiTouchStartY - y) > 60;
-    },
-    stopPressTalk() {
-      // #ifdef MP-WEIXIN
-      if (!this.isRecording || !this.aiRecorderManager) return;
-      if (this.aiWillCancel) {
-        this.aiCancelled = true;
-      }
-      this.aiRecorderManager.stop();
-      this.isRecording = false;
-      this.stopAiTimer();
-      this.aiVoiceTip = this.aiCancelled ? '已取消' : '识别中...';
-      this.aiWillCancel = false;
-      this.aiTouchStartY = 0;
-      // #endif
-    },
-    handleAiVoiceFile(filePath) {
-      const token = uni.getStorageSync('token');
-      if (!token) {
-        this.aiVoiceTip = '请先登录后使用语音记账';
-        return;
-      }
-      uni.uploadFile({
-        url: getApp().globalData.baseUrl + '/ai-accounting/voice-agent',
-        filePath,
-        name: 'audio',
-        header: {
-          Authorization: 'Bearer ' + token
-        },
-        success: (uploadRes) => {
-          try {
-            const data = JSON.parse(uploadRes.data || '{}');
-            if (data.code === 200) {
-              const reply = data.data || {};
-              const displayText = (reply.displayText || '').trim();
-              this.aiVoiceTip = displayText ? '识别成功' : '未返回内容';
-
-              // 直接展示对话框文案即可（语音记账多条也只做逐条文本展示）
-              this.aiText = displayText;
-              this.aiParsed = null;
-            } else {
-              this.aiVoiceTip = data.message || '识别失败';
-              uni.showToast({ title: this.aiVoiceTip, icon: 'none' });
-            }
-          } catch (e) {
-            this.aiVoiceTip = '语音解析失败';
-            uni.showToast({ title: this.aiVoiceTip, icon: 'none' });
-          }
-        },
-        fail: () => {
-          this.aiVoiceTip = '上传失败，请重试';
-          uni.showToast({ title: this.aiVoiceTip, icon: 'none' });
-        }
-      });
-    },
-    
-    async saveAiRecord() {
-      // 自动解析一次（不提供“智能解析”按钮）
-      if (!this.aiParsed) {
-        const text = (this.aiText || '').trim();
-        if (!text) {
-          uni.showToast({ title: '请先输入内容', icon: 'none' });
-          return;
-        }
-        const amountMatch = text.match(/(\d+(\.\d{1,2})?)/);
-        const amount = amountMatch ? parseFloat(amountMatch[1]) : 0;
-        if (!amount || amount <= 0) {
-          uni.showToast({ title: '未识别到有效金额', icon: 'none' });
-          return;
-        }
-        const isIncome = /(收入|工资|奖金|退款|红包|转账|理财|兼职|到账)/.test(text);
-        const type = isIncome ? 2 : 1;
-        const list = type === 1 ? this.aiExpenseCategories : this.aiIncomeCategories;
-        const hit = list.find(item => text.includes(item.name));
-        const category = hit || list.find(item => item.name === '其他') || list[0];
-        this.aiParsed = {
-          type,
-          amount,
-          categoryId: category?.id,
-          categoryName: category?.name || '其他',
-          remark: text.replace(/(\d+(\.\d{1,2})?)/, '').replace(/(元|块|人民币)/g, '').trim()
-        };
-      }
-      const loggedIn = !!uni.getStorageSync('token');
-      if (!loggedIn) {
-        uni.showToast({ title: '请先登录后再保存', icon: 'none' });
-        return;
-      }
-      try {
-        await addRecord({
-          categoryId: this.aiParsed.categoryId,
-          type: this.aiParsed.type,
-          amount: this.aiParsed.amount,
-          remark: this.aiParsed.remark,
-          recordDate: getCurrentDate(),
-          recordTime: getCurrentTime()
-        });
-        uni.showToast({ title: '嗖记账成功', icon: 'success' });
-        this.showAiPanel = false;
-        this.loadData();
-      } catch (e) {
-        uni.showToast({ title: '保存失败，请重试', icon: 'none' });
-      }
     },
     goToBill() {
       uni.navigateTo({ url: '/pages/bill/bill' });
@@ -891,139 +627,11 @@ export default {
 }
 
 .fab-icon {
-  font-size: 28rpx;
+  font-size: 128rpx;
   color: #FFFFFF;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 1rpx;
+  font-weight: 300;
+  line-height: 112rpx;
+  transform: translateY(-10rpx);
 }
 
-.ai-mask {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.35);
-  z-index: 150;
-  display: flex;
-  align-items: flex-end;
-}
-
-.ai-panel {
-  width: 100%;
-  background: #FFFFFF;
-  border-radius: 28rpx 28rpx 0 0;
-  padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom));
-}
-
-.ai-title {
-  display: block;
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #2D3142;
-  margin-bottom: 18rpx;
-}
-
-.press-area {
-  width: 100%;
-  height: 88rpx;
-  border-radius: 18rpx;
-  background: #F5F7FC;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14rpx;
-  border: 2rpx solid rgba(123, 158, 245, 0.15);
-}
-
-.press-area.recording {
-  background: linear-gradient(135deg, rgba(123, 158, 245, 0.18), rgba(184, 160, 245, 0.18));
-  border-color: rgba(123, 158, 245, 0.45);
-}
-
-.press-text {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: #2D3142;
-}
-
-.ai-tip {
-  display: block;
-  font-size: 24rpx;
-  color: #6B7280;
-  margin-bottom: 10rpx;
-}
-
-.ai-cancel-tip {
-  display: block;
-  font-size: 24rpx;
-  color: #EF4444;
-  margin-bottom: 10rpx;
-}
-
-.ai-input {
-  width: 100%;
-  min-height: 160rpx;
-  background: #F5F7FC;
-  border-radius: 18rpx;
-  padding: 16rpx 18rpx;
-  font-size: 28rpx;
-  color: #2D3142;
-}
-
-.ai-placeholder {
-  color: #B8BECC;
-}
-
-.ai-actions {
-  display: flex;
-  gap: 14rpx;
-  margin-top: 18rpx;
-}
-
-.ai-btn {
-  flex: 1;
-  height: 78rpx;
-  border-radius: 16rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.ai-btn.ghost {
-  background: #EFF3FB;
-}
-
-.ai-btn.main {
-  background: linear-gradient(135deg, #7B9EF5, #B8A0F5);
-}
-
-.ai-btn-text {
-  color: #FFFFFF;
-  font-size: 28rpx;
-  font-weight: 600;
-}
-
-.ghost-text {
-  color: #6B7280;
-}
-
-.ai-result {
-  margin-top: 18rpx;
-  background: #F8FAFF;
-  border-radius: 16rpx;
-  padding: 14rpx 16rpx;
-}
-
-.ai-result-line {
-  display: block;
-  font-size: 24rpx;
-  color: #4B5563;
-  margin-bottom: 6rpx;
-}
-
-.ai-result-line:last-child {
-  margin-bottom: 0;
-}
 </style>
