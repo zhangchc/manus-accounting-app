@@ -1,4 +1,6 @@
 <script>
+import { currentEnv } from './config/env';
+
 export default {
   onLaunch() {
     console.log('App Launch');
@@ -114,7 +116,7 @@ export default {
     }
   },
   globalData: {
-    baseUrl: 'http://localhost:8080/api',
+    baseUrl: currentEnv.baseUrl,
     loginPromise: null,
     loggedOut: false
   }

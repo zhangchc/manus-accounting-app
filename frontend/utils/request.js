@@ -1,8 +1,10 @@
 /**
  * 网络请求封装
  */
+import { currentEnv, ENV_MODE } from '../config/env';
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = currentEnv.baseUrl;
+console.log(`[request] 当前环境: ${ENV_MODE}, BASE_URL: ${BASE_URL}`);
 
 const request = (options) => {
   return new Promise((resolve, reject) => {
