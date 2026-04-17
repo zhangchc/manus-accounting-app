@@ -108,7 +108,7 @@
 
 <script>
 import { getCategoryList, addRecord, updateRecord } from '../../api/index';
-import { getCurrentDate, getCurrentTime, formatMoney } from '../../utils/util';
+import { getCurrentDate, getCurrentTime } from '../../utils/util';
 import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
 
 export default {

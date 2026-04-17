@@ -72,7 +72,7 @@
       
       <view class="record-list" v-if="todayRecords.length > 0">
         <view class="record-item" v-for="item in todayRecords" :key="item.id" @longpress="onRecordLongPress(item)">
-          <view class="record-icon-wrap" :style="{ background: getIconBgColor(item.categoryName) }">
+          <view class="record-icon-wrap">
             <image class="record-icon-img" :src="getIconPath(item.categoryName, item.type)" mode="aspectFit"></image>
           </view>
           <view class="record-info">
@@ -106,7 +106,7 @@
 <script>
 import { getMonthBill, deleteRecord } from '../../api/index';
 import { formatMoney, getCurrentYearMonth, getCurrentDate } from '../../utils/util';
-import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
+import { getCategoryIconPath } from '../../utils/icon';
 
 export default {
   data() {
@@ -188,9 +188,6 @@ export default {
     formatMoney,
     getIconPath(name, type) {
       return getCategoryIconPath(name, type);
-    },
-    getIconBgColor(name) {
-      return getCategoryBgColor(name);
     },
     async loadData() {
       try {
@@ -525,8 +522,8 @@ export default {
 }
 
 .record-icon-img {
-  width: 52rpx;
-  height: 52rpx;
+  width: 84rpx;
+  height: 84rpx;
 }
 
 .record-info {

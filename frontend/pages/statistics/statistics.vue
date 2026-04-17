@@ -48,7 +48,7 @@
         <text class="chart-title">分类占比</text>
         
         <view class="pie-area">
-          <canvas canvas-id="pieChart" class="pie-canvas" :style="{ width: '400rpx', height: '400rpx' }"></canvas>
+          <canvas id="pieChart" type="2d" class="pie-canvas"></canvas>
           <view class="pie-center">
             <text class="pie-center-amount">¥{{ formatMoney(type === 1 ? totalExpense : totalIncome) }}</text>
             <text class="pie-center-label">{{ categoryList.length }}个分类</text>
@@ -89,7 +89,7 @@
         <view class="rank-list">
           <view class="rank-item" v-for="(item, index) in categoryList" :key="item.categoryId">
             <view class="rank-left">
-              <view class="rank-icon-wrap" :style="{ background: getIconBgColor(item.categoryName) }">
+              <view class="rank-icon-wrap">
                 <image class="rank-icon-img" :src="getIconPath(item.categoryName, type)" mode="aspectFit"></image>
               </view>
               <view class="rank-info">
@@ -121,7 +121,7 @@
 <script>
 import { getStatistics } from '../../api/index';
 import { formatMoney, getCurrentYearMonth, getMonthName, getPrevMonth, getNextMonth } from '../../utils/util';
-import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
+import { getCategoryIconPath } from '../../utils/icon';
 
 export default {
   data() {
@@ -134,6 +134,7 @@ export default {
       categoryList: [],
       trendList: [],
       maxTrendAmount: 0,
+      requestSeq: 0,
       pieColors: ['#F5707A', '#7B9EF5', '#5CC9A7', '#B8A0F5', '#F5C07C', '#F5A0B5']
     };
   },
@@ -179,15 +180,14 @@ export default {
     getIconPath(name, type) {
       return getCategoryIconPath(name, type);
     },
-    getIconBgColor(name) {
-      return getCategoryBgColor(name);
-    },
     async loadData() {
+      const seq = ++this.requestSeq;
       try {
         const res = await getStatistics({
           yearMonth: this.currentMonth,
           type: this.type
         });
+        if (seq !== this.requestSeq) return;
         const data = res.data;
         this.totalIncome = data.totalIncome || 0;
         this.totalExpense = data.totalExpense || 0;
@@ -219,40 +219,53 @@ export default {
       this.loadData();
     },
     drawPieChart() {
-      const ctx = uni.createCanvasContext('pieChart', this);
-      const centerX = 100;
-      const centerY = 100;
-      const radius = 85;
-      const innerRadius = 55;
-      
-      // 清空画布
-      ctx.clearRect(0, 0, 200, 200);
-      
-      let startAngle = -Math.PI / 2;
-      const total = this.type === 1 ? this.totalExpense : this.totalIncome;
-      
-      for (let i = 0; i < this.categoryList.length && i < 6; i++) {
-        const item = this.categoryList[i];
-        const percentNum = parseFloat(item.percent) || 0;
-        const sliceAngle = (percentNum / 100) * 2 * Math.PI;
-        
-        if (sliceAngle <= 0) continue;
-        
-        ctx.beginPath();
-        ctx.moveTo(
-          centerX + innerRadius * Math.cos(startAngle),
-          centerY + innerRadius * Math.sin(startAngle)
-        );
-        ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
-        ctx.arc(centerX, centerY, innerRadius, startAngle + sliceAngle, startAngle, true);
-        ctx.closePath();
-        ctx.setFillStyle(this.pieColors[i]);
-        ctx.fill();
-        
-        startAngle += sliceAngle;
-      }
-      
-      ctx.draw();
+      uni
+        .createSelectorQuery()
+        .in(this)
+        .select('#pieChart')
+        .fields({ node: true, size: true }, (res) => {
+          if (!res || !res.node || !res.width || !res.height) return;
+
+          const canvas = res.node;
+          const ctx = canvas.getContext('2d');
+          const dpr = uni.getSystemInfoSync().pixelRatio || 1;
+
+          // 使用真实像素尺寸，避免真机高 DPR 下位置和缩放异常
+          canvas.width = res.width * dpr;
+          canvas.height = res.height * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+          const centerX = res.width / 2;
+          const centerY = res.height / 2;
+          const radius = Math.min(res.width, res.height) * 0.425;
+          const innerRadius = radius * 0.65;
+
+          ctx.clearRect(0, 0, res.width, res.height);
+
+          let startAngle = -Math.PI / 2;
+
+          for (let i = 0; i < this.categoryList.length && i < 6; i++) {
+            const item = this.categoryList[i];
+            const percentNum = parseFloat(item.percent) || 0;
+            const sliceAngle = (percentNum / 100) * Math.PI * 2;
+
+            if (sliceAngle <= 0) continue;
+
+            ctx.beginPath();
+            ctx.moveTo(
+              centerX + innerRadius * Math.cos(startAngle),
+              centerY + innerRadius * Math.sin(startAngle)
+            );
+            ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+            ctx.arc(centerX, centerY, innerRadius, startAngle + sliceAngle, startAngle, true);
+            ctx.closePath();
+            ctx.fillStyle = this.pieColors[i % this.pieColors.length];
+            ctx.fill();
+
+            startAngle += sliceAngle;
+          }
+        })
+        .exec();
     },
     getBarHeight(amount) {
       if (this.maxTrendAmount <= 0) return 4;
@@ -566,8 +579,8 @@ export default {
 }
 
 .rank-icon-img {
-  width: 40rpx;
-  height: 40rpx;
+  width: 64rpx;
+  height: 64rpx;
 }
 
 .rank-info {
@@ -619,11 +632,6 @@ export default {
   flex-direction: column;
   align-items: center;
   padding: 120rpx 0;
-}
-
-.empty-icon {
-  font-size: 80rpx;
-  margin-bottom: 24rpx;
 }
 
 .empty-text {

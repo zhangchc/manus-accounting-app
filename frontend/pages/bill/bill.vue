@@ -59,7 +59,7 @@
         
         <view class="record-card">
           <view class="record-item" v-for="item in day.records" :key="item.id" @longpress="onRecordLongPress(item)">
-            <view class="record-icon-wrap" :style="{ background: getIconBg(item.categoryName) }">
+            <view class="record-icon-wrap">
               <image class="record-icon-img" :src="getIconPath(item.categoryName, item.type)" mode="aspectFit"></image>
             </view>
             <view class="record-info">
@@ -86,7 +86,7 @@
 <script>
 import { getMonthBill, deleteRecord } from '../../api/index';
 import { formatMoney, getCurrentYearMonth, getMonthName, getPrevMonth, getNextMonth, formatDateDisplay } from '../../utils/util';
-import { getCategoryIconPath, getCategoryBgColor } from '../../utils/icon';
+import { getCategoryIconPath } from '../../utils/icon';
 
 export default {
   data() {
@@ -129,9 +129,6 @@ export default {
     },
     goBack() {
       uni.navigateBack();
-    },
-    getIconBg(name) {
-      return getCategoryBgColor(name);
     },
     async loadData() {
       try {
@@ -364,8 +361,8 @@ export default {
 }
 
 .record-icon-img {
-  width: 44rpx;
-  height: 44rpx;
+  width: 72rpx;
+  height: 72rpx;
 }
 
 .record-info {
@@ -410,11 +407,6 @@ export default {
   flex-direction: column;
   align-items: center;
   padding: 120rpx 0;
-}
-
-.empty-icon {
-  font-size: 80rpx;
-  margin-bottom: 24rpx;
 }
 
 .empty-text {
