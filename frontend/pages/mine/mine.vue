@@ -90,7 +90,7 @@
     </view>
 
     <!-- 登录入口（保持在“我的”tab中） -->
-    <view class="login-card" v-else>
+    <view class="login-card login-card-guest" v-else>
       <text class="login-title">登录后开启完整体验</text>
       <text class="login-desc">请先授权头像并填写昵称</text>
       <!-- #ifdef MP-WEIXIN -->
@@ -100,11 +100,16 @@
       </button>
       <input
         class="nick-input"
+        :class="{ 'nick-input-active': loginNickFocus }"
         type="nickname"
         v-model="loginForm.nickName"
         placeholder="请输入昵称"
         placeholder-style="color:#B8BECC"
+        :focus="loginNickFocus"
+        @focus="onLoginNickFocus"
+        @blur="loginNickFocus = false"
       />
+      <text class="nick-tip" :class="{ 'nick-tip-active': loginNickFocus }">点击输入框后，底部会出现“用微信昵称”按钮</text>
       <!-- #endif -->
       <view class="login-btn" @click="handleLogin">
         <text class="login-btn-text">微信一键登录</text>
@@ -169,6 +174,7 @@ export default {
       yearBalance: 0,
       showEditPanel: false,
       editSaving: false,
+      loginNickFocus: false,
       editForm: {
         nickName: '',
         avatarUrl: ''
@@ -298,6 +304,7 @@ export default {
       }
       if (!this.loginForm.nickName || !this.loginForm.nickName.trim()) {
         uni.showToast({ title: '请输入昵称', icon: 'none' });
+        this.loginNickFocus = true;
         return;
       }
       getApp().relogin({
@@ -331,6 +338,24 @@ export default {
       if (avatarUrl) {
         this.loginForm.avatarUrl = avatarUrl;
       }
+    },
+    onLoginNickFocus() {
+      this.loginNickFocus = true;
+      this.$nextTick(() => {
+        uni
+          .createSelectorQuery()
+          .in(this)
+          .select('.login-card-guest')
+          .boundingClientRect((rect) => {
+            if (!rect) return;
+            const targetTop = Math.max(rect.top - 24, 0);
+            uni.pageScrollTo({
+              scrollTop: targetTop,
+              duration: 220
+            });
+          })
+          .exec();
+      });
     },
     logout() {
       uni.showModal({
@@ -559,6 +584,12 @@ export default {
   box-shadow: 0 4rpx 24rpx rgba(123, 158, 245, 0.12);
 }
 
+.login-card-guest {
+  margin-top: -36rpx;
+  position: relative;
+  z-index: 2;
+}
+
 .login-title {
   display: block;
   font-size: 32rpx;
@@ -607,6 +638,25 @@ export default {
   font-size: 28rpx;
   color: #2D3142;
   margin-bottom: 22rpx;
+  border: 2rpx solid transparent;
+  transition: all 0.2s ease;
+}
+
+.nick-input-active {
+  border-color: rgba(123, 158, 245, 0.5);
+  box-shadow: 0 0 0 6rpx rgba(123, 158, 245, 0.08);
+}
+
+.nick-tip {
+  display: block;
+  margin: -8rpx 0 16rpx;
+  font-size: 22rpx;
+  color: #9CA3AF;
+  transition: color 0.2s ease;
+}
+
+.nick-tip-active {
+  color: #7B9EF5;
 }
 
 .login-btn {
