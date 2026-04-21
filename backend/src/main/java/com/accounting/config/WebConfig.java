@@ -1,6 +1,7 @@
 package com.accounting.config;
 
 import com.accounting.common.BusinessException;
+import com.accounting.service.UserService;
 import com.accounting.utils.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private UserService userService;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -61,6 +65,9 @@ public class WebConfig implements WebMvcConfigurer {
 
             Long userId = jwtUtil.getUserId(token);
             if (userId == null) {
+                throw new BusinessException(401, "未登录或登录已过期");
+            }
+            if (userService.getUserInfo(userId) == null) {
                 throw new BusinessException(401, "未登录或登录已过期");
             }
 

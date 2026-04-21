@@ -104,7 +104,7 @@
 </template>
 
 <script>
-import { getMonthBill, deleteRecord } from '../../api/index';
+import { getMonthBill, deleteRecord, getUserInfo } from '../../api/index';
 import { formatMoney, getCurrentYearMonth, getCurrentDate } from '../../utils/util';
 import { getCategoryIconPath } from '../../utils/icon';
 
@@ -175,6 +175,7 @@ export default {
         this.todayRecords = [];
         return;
       }
+      await this.syncUserInfo();
       this.loadData();
     } catch (e) {
       console.error('登录未完成', e);
@@ -184,8 +185,30 @@ export default {
     const sysInfo = uni.getSystemInfoSync();
     this.statusBarHeight = sysInfo.statusBarHeight || 20;
   },
+  onShareAppMessage() {
+    return {
+      title: '蚂蚁记账：每天记一笔，花钱看得见',
+      path: '/pages/index/index'
+    };
+  },
+  onShareTimeline() {
+    return {
+      title: '蚂蚁记账：把每一笔都记清楚',
+      query: ''
+    };
+  },
   methods: {
     formatMoney,
+    async syncUserInfo() {
+      try {
+        const res = await getUserInfo();
+        this.userInfo = res.data || {};
+        uni.setStorageSync('userInfo', this.userInfo);
+      } catch (e) {
+        // 拉取失败时至少回退到本地缓存，避免出现空白昵称
+        this.userInfo = uni.getStorageSync('userInfo') || {};
+      }
+    },
     getIconPath(name, type) {
       return getCategoryIconPath(name, type);
     },

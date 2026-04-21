@@ -79,13 +79,47 @@ export default {
       // #endif
     },
 
+    validateSession(token) {
+      return new Promise((resolve, reject) => {
+        uni.request({
+          url: this.globalData.baseUrl + '/user/info',
+          method: 'GET',
+          header: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? 'Bearer ' + token : ''
+          },
+          success: (res) => {
+            if (res?.data?.code === 200 && res?.data?.data) {
+              uni.setStorageSync('userInfo', res.data.data);
+              resolve(true);
+              return;
+            }
+            reject(new Error('SESSION_INVALID'));
+          },
+          fail: () => reject(new Error('SESSION_INVALID'))
+        });
+      });
+    },
     /**
      * 确保已登录：有 token 直接 resolve，否则执行并等待 autoLogin
      * 各页在请求前调用 await getApp().ensureLogin()
      */
     ensureLogin(force = false) {
-      if (uni.getStorageSync('token')) {
-        return Promise.resolve(true);
+      const token = uni.getStorageSync('token');
+      if (token) {
+        if (!this.globalData.sessionCheckPromise) {
+          this.globalData.sessionCheckPromise = this.validateSession(token)
+            .finally(() => {
+              this.globalData.sessionCheckPromise = null;
+            });
+        }
+        return this.globalData.sessionCheckPromise
+          .then(() => true)
+          .catch(() => {
+            // token存在但会话无效（用户被删/过期），回退到未登录态
+            this.logout();
+            return false;
+          });
       }
       if (this.globalData.loggedOut && !force) {
         return Promise.resolve(false);
@@ -105,6 +139,7 @@ export default {
       uni.setStorageSync('loggedOut', true);
       this.globalData.loggedOut = true;
       this.globalData.loginPromise = null;
+      this.globalData.sessionCheckPromise = null;
     },
     relogin(profile = {}) {
       this.globalData.loggedOut = false;
@@ -118,6 +153,7 @@ export default {
   globalData: {
     baseUrl: currentEnv.baseUrl,
     loginPromise: null,
+    sessionCheckPromise: null,
     loggedOut: false
   }
 };

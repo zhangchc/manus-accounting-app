@@ -78,7 +78,7 @@
       <view class="menu-item" @click="showAbout">
         <view class="menu-left">
           <text class="menu-icon">💡</text>
-          <text class="menu-name">关于我们</text>
+          <text class="menu-name">关于我</text>
         </view>
         <text class="menu-arrow">›</text>
       </view>
@@ -151,6 +151,24 @@
         </view>
       </view>
     </view>
+
+    <!-- 关于我弹层 -->
+    <view class="edit-mask" v-if="showAboutPanel" @click="closeAboutPanel">
+      <view class="edit-panel" @click.stop>
+        <text class="edit-title">关于蚂蚁记账</text>
+        <view class="about-content">
+          <text class="about-line">Hi，这里是蚂蚁记账 v1.0.0 👋</text>
+          <text class="about-line">一个由个人开发者独立开发的小工具，</text>
+          <text class="about-line">初衷就是想做个干净清爽的记账小程序，</text>
+          <text class="about-line">帮你轻松记下每一笔收支，把生活过得更有规划感～</text>
+        </view>
+        <view class="edit-actions">
+          <view class="action-btn save-btn" @click="closeAboutPanel">
+            <text class="save-text">知道了</text>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -173,6 +191,7 @@ export default {
       yearExpense: 0,
       yearBalance: 0,
       showEditPanel: false,
+      showAboutPanel: false,
       editSaving: false,
       loginNickFocus: false,
       editForm: {
@@ -203,7 +222,15 @@ export default {
         return;
       }
       this.isLoggedIn = true;
-      this.loadUserInfo();
+      const userInfoOk = await this.loadUserInfo();
+      if (!userInfoOk && !uni.getStorageSync('token')) {
+        this.isLoggedIn = false;
+        this.userInfo = {};
+        this.yearIncome = 0;
+        this.yearExpense = 0;
+        this.yearBalance = 0;
+        return;
+      }
       this.loadYearSummary();
     } catch (e) {
       this.isLoggedIn = false;
@@ -216,15 +243,36 @@ export default {
       }
     }
   },
+  onShareAppMessage() {
+    return {
+      title: '蚂蚁记账：清爽记账，轻松管钱',
+      path: '/pages/index/index'
+    };
+  },
+  onShareTimeline() {
+    return {
+      title: '蚂蚁记账：收入支出一目了然',
+      query: ''
+    };
+  },
   methods: {
     formatMoney,
     async loadUserInfo() {
       try {
         const res = await getUserInfo();
-        this.userInfo = res.data || {};
+        const userInfo = res.data || null;
+        if (!userInfo || !userInfo.id) {
+          this.userInfo = {};
+          uni.removeStorageSync('userInfo');
+          return false;
+        }
+        this.userInfo = userInfo;
         uni.setStorageSync('userInfo', this.userInfo);
+        return true;
       } catch (e) {
         console.error('加载用户信息失败', e);
+        this.userInfo = uni.getStorageSync('userInfo') || {};
+        return false;
       }
     },
     openEditProfile() {
@@ -289,12 +337,10 @@ export default {
       uni.showToast({ title: '功能开发中', icon: 'none' });
     },
     showAbout() {
-      uni.showModal({
-        title: '关于轻记账',
-        content: '轻记账 v1.0.0\n\n一款简约清爽的记账小程序\n记录每一笔收支，让生活更有规划',
-        showCancel: false,
-        confirmText: '知道了'
-      });
+      this.showAboutPanel = true;
+    },
+    closeAboutPanel() {
+      this.showAboutPanel = false;
     },
     handleLogin() {
       // #ifdef MP-WEIXIN
@@ -735,5 +781,18 @@ export default {
   font-size: 28rpx;
   color: #FFFFFF;
   font-weight: 600;
+}
+
+.about-content {
+  margin: 8rpx 0 24rpx;
+  text-align: center;
+}
+
+.about-line {
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: #6B7280;
+  text-align: center;
 }
 </style>
