@@ -29,11 +29,17 @@ export default {
             uni.request({
               url: this.globalData.baseUrl + '/user/wxLogin',
               method: 'POST',
-              data: {
-                code: loginRes.code,
-                nickName: profile.nickName || '',
-                avatarUrl: profile.avatarUrl || ''
-              },
+              data: (() => {
+                const payload = {
+                  code: loginRes.code
+                };
+                const nickName = (profile.nickName || '').trim();
+                const avatarUrl = (profile.avatarUrl || '').trim();
+                // 静默登录不传空字符串，避免覆盖后端已有资料
+                if (nickName) payload.nickName = nickName;
+                if (avatarUrl) payload.avatarUrl = avatarUrl;
+                return payload;
+              })(),
               success: (res) => {
                 if (res.data && res.data.code === 200 && res.data.data) {
                   uni.setStorageSync('token', res.data.data.token);

@@ -3,6 +3,7 @@ package com.accounting.service.impl;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import cn.hutool.core.util.StrUtil;
 import com.accounting.common.BusinessException;
 import com.accounting.dto.LoginDTO;
 import com.accounting.entity.Book;
@@ -99,10 +100,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             bookService.save(defaultBook);
         } else {
             // 更新用户信息
-            if (loginDTO.getNickName() != null) {
+            if (StrUtil.isNotBlank(loginDTO.getNickName())) {
                 user.setNickName(loginDTO.getNickName());
             }
-            if (loginDTO.getAvatarUrl() != null) {
+            if (StrUtil.isNotBlank(loginDTO.getAvatarUrl())) {
                 user.setAvatarUrl(loginDTO.getAvatarUrl());
             }
             this.updateById(user);
