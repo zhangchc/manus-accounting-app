@@ -4,7 +4,7 @@
  * - production  -> prod
  */
 // const ENV_MODE = process.env.NODE_ENV === 'production' ? 'prod' : 'test';
-const ENV_MODE = 'prod';
+const ENV_MODE = 'test';
 
 const ENV_CONFIG = {
   test: {

@@ -26,7 +26,6 @@ mybatis-plus:
       logic-not-delete-value: 0
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 # 微信小程序配置
 wechat:
@@ -40,8 +39,25 @@ jwt:
 
 # 日志配置
 logging:
+  # 控制台带上 MDC 中的 traceId（由 TraceIdFilter 写入，键名见 TraceIdFilter.TRACE_ID_MDC_KEY）
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %5p %clr(${PID:- }){magenta} --- [%15.15t] %clr([traceId:%X{traceId:-}]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx"
   level:
     com.accounting: debug
+    # 避免 MyBatis Mapper 在 debug 下持续打印 SQL（需要排错时可改为 debug）
+    com.accounting.mapper: info
+
+  # Controller 入参/出参日志（AOP）
+  controller-io:
+    enabled: true
+    log-args: true
+    log-result: true
+    max-len: 32768
+    masking: none
+    exclude-paths:
+      - /api/user/login
+      - /api/user/wxLogin
+      - /error
 
 # AI记账（阿里百炼）
 ai:

@@ -1,0 +1,55 @@
+---
+description: accounting-backend 架构分层、技术栈与编码约定（与仓库代码一致）
+globs: "backend/**/*.java"
+alwaysApply: false
+---
+
+# accounting-backend — Cursor Rules
+
+面向 `backend/` 下「微信记账」Spring Boot 服务。修改代码前先对照现有同级类的写法。
+
+## 技术栈
+
+- Java 8、Spring Boot **2.7.x**、`javax.servlet` / **`javax.validation`**（非 Jakarta）。
+- Web：REST；JSON 日期：`application.yml` 中 Jackson `GMT+8`、`yyyy-MM-dd HH:mm:ss`。
+- 持久化：**MyBatis-Plus 3.5.x** + MySQL 8；Druid 连接池；实体全局逻辑删除字段 **`deleted`**（与 `application.yml` 中 `logic-delete-*` 一致）。
+- 其他：Lombok、Hutool、**jjwt 0.9.x**、`dashscope-sdk-java`（阿里云百炼 / AI 记账）、Spring AOP（Controller 日志）。
+
+上下文路径：**`/api`**（`server.servlet.context-path`），对外路径形如 `/api/user/info`。
+
+## 包职责（严禁跨层乱扔逻辑）
+
+| 包 | 职责 |
+|---|------|
+| `controller` | `@RestController` + `@RequestMapping`；从 `HttpServletRequest#getAttribute("userId")` 取当前用户；返回 **`Result<T>`**；入参 **`@Valid`**；不写业务 SQL。 |
+| `service` / `service.impl` | 业务逻辑、事务边界（如需）；可调多个 Mapper / 其他 Service。**资源类**可继承 **`ServiceImpl<Mapper, Entity>`**（如 `RecordServiceImpl`）；**集成外部能力**的普通 `@Service` 即可（如 `AiAccountingServiceImpl`）。 |
+| `mapper` | `extends BaseMapper<Entity>` + `@Mapper`；**复杂 JOIN/聚合**写在 **`src/main/resources/mapper/*.xml`**，`namespace` 与接口全限定名一致。 |
+| `entity` | 表映射：`@TableName`、`@TableId(type = AUTO)`、`@TableField(fill = …)`；**金额用 `BigDecimal`**；时间与项目一致时用 `LocalDate` / `LocalDateTime`。逻辑删除字段与 MP 全局配置对齐。 |
+| `dto` | 接口入参；使用 **`javax.validation`** 注解（参考 `RecordDTO`）。 |
+| `vo` | 出参视图 / Mapper XML `resultType`；勿与 entity 混用职责。 |
+| `common` | `Result`、`BusinessException`、`GlobalExceptionHandler` — 统一响应与异常，勿再发明一套。 |
+| `config` | `WebConfig`（JWT 拦截）、`CorsConfig`、`MybatisPlusConfig`（分页插件、**MetaObjectHandler** 填充 `createTime`/`updateTime`）等。 |
+| `utils` | 无状态工具（如 `JwtUtil`），通过 `@Value` 读配置。 |
+| `logging` | `TraceIdFilter`（MDC）、`ControllerIoLoggingAspect` — 改日志行为时注意与 `logging.controller-io` 配置一致。 |
+
+## API 与异常
+
+- 成功/失败统一 **`Result.success` / `Result.error` / `Result.unauthorized`**；业务错误抛 **`BusinessException`**（可带 `code`），由 **`GlobalExceptionHandler`** 转为 `Result`。
+- **认证**：`WebConfig` 中拦截器校验 `Authorization`（支持 `Bearer ` 前缀），**放行路径**仅包含 `/user/login`、`/user/wxLogin`、`/error` 等已列项；新增**无需登录**接口必须在 **`excludePathPatterns`** 中登记。
+- 业务上必须校验 **资源归属**（如 `userId` 与记录 `userId` 一致），参考 `RecordServiceImpl#updateRecord` / `deleteRecord`。
+
+## MyBatis-Plus 与 SQL
+
+- 简单 CRUD 用 `BaseMapper` / `ServiceImpl` 提供的方法；**列表、统计、多表**用 XML（示例：`RecordMapper.xml`，`WHERE r.deleted = 0` 与逻辑删除一致）。
+- 新增 XML 时放在 **`mapper/*.xml`**，并保证 `mybatis-plus.mapper-locations` 能加载到。
+
+## AI 记账（`AiAccountingServiceImpl`）
+
+- 通过 **`@Value("${ai.bailian...}")`** 等读取配置；**严禁**在代码或提交中硬编码 API Key、微信 secret、JWT secret；本地/生产用环境变量或私有 `application-local.yml`（不入库）。
+- 外部调用需合理日志（traceId/userId）、异常转 **`BusinessException`** 或可预期的 `Result`，避免向外暴露底层堆栈细节。
+
+## 协作与改动纪律
+
+- 注释与用户沟通可用**简体中文**；**类名、方法名、REST 路径、JSON 字段**保持与现有代码一致（多为英文小驼峰）。
+- **最小改动**：不借机全局格式化或与需求无关的重构。
+- 修改请求/响应体或错误码语义时，同步考虑**小程序前端**或其它调用方。
