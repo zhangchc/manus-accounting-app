@@ -14,6 +14,8 @@ public interface RoleService {
 
     void update(RoleUpdateDTO dto);
 
+    void delete(Long id);
+
     List<Long> getMenuIdsByRoleId(Long roleId);
 
     void assignMenus(Long roleId, List<Long> menuIds);

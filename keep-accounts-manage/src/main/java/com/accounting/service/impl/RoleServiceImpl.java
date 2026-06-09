@@ -87,6 +87,19 @@ public class RoleServiceImpl implements RoleService {
     }
 
     @Override
+    @Transactional
+    public void delete(Long id) {
+        SysRole role = roleMapper.selectById(id);
+        if (role == null) {
+            throw new BusinessException("角色不存在");
+        }
+        roleMenuMapper.delete(
+                new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, id)
+        );
+        roleMapper.deleteById(id);
+    }
+
+    @Override
     public List<Long> getMenuIdsByRoleId(Long roleId) {
         List<SysRoleMenu> list = roleMenuMapper.selectList(
                 new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId)

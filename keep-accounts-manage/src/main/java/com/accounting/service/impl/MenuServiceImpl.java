@@ -5,7 +5,11 @@ import com.accounting.common.BusinessException;
 import com.accounting.dto.MenuCreateDTO;
 import com.accounting.dto.MenuUpdateDTO;
 import com.accounting.entity.SysMenu;
+import com.accounting.entity.SysRoleMenu;
+import com.accounting.entity.SysUserRole;
 import com.accounting.mapper.SysMenuMapper;
+import com.accounting.mapper.SysRoleMenuMapper;
+import com.accounting.mapper.SysUserRoleMapper;
 import com.accounting.service.MenuService;
 import com.accounting.vo.MenuVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -22,6 +26,12 @@ public class MenuServiceImpl implements MenuService {
 
     @Autowired
     private SysMenuMapper menuMapper;
+
+    @Autowired
+    private SysUserRoleMapper userRoleMapper;
+
+    @Autowired
+    private SysRoleMenuMapper roleMenuMapper;
 
     @Autowired
     private HttpServletRequest request;
@@ -116,6 +126,53 @@ public class MenuServiceImpl implements MenuService {
         menuMapper.deleteById(id);
     }
 
+    @Override
+    public List<MenuVO> getMenusByUserId(Long userId) {
+        List<SysUserRole> userRoles = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId)
+        );
+        List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).collect(Collectors.toList());
+        if (roleIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<SysRoleMenu> roleMenus = roleMenuMapper.selectList(
+                new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds)
+        );
+        Set<Long> menuIds = roleMenus.stream().map(SysRoleMenu::getMenuId).collect(Collectors.toSet());
+        if (menuIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<SysMenu> allMenus = menuMapper.selectList(
+                new LambdaQueryWrapper<SysMenu>().orderByAsc(SysMenu::getSort)
+        );
+
+        Map<Long, Long> parentMap = new HashMap<>();
+        for (SysMenu m : allMenus) {
+            parentMap.put(m.getId(), m.getParentId() != null ? m.getParentId() : 0L);
+        }
+
+        Set<Long> allIds = new HashSet<>(menuIds);
+        for (Long mid : menuIds) {
+            Long parentId = parentMap.get(mid);
+            while (parentId != null && parentId != 0L) {
+                allIds.add(parentId);
+                parentId = parentMap.get(parentId);
+            }
+        }
+
+        List<SysMenu> filtered = allMenus.stream()
+                .filter(m -> allIds.contains(m.getId()))
+                .collect(Collectors.toList());
+
+        Map<Long, List<SysMenu>> childrenMap = filtered.stream()
+                .collect(Collectors.groupingBy(m -> m.getParentId() != null ? m.getParentId() : 0L));
+        return childrenMap.getOrDefault(0L, Collections.emptyList()).stream()
+                .map(m -> toVO(m, childrenMap))
+                .collect(Collectors.toList());
+    }
+
     private void validateType(String type) {
         if (!"dir".equals(type) && !"menu".equals(type) && !"btn".equals(type)) {
             throw new BusinessException("菜单类型必须为 dir、menu 或 btn");
@@ -157,5 +214,33 @@ public class MenuServiceImpl implements MenuService {
                 .collect(Collectors.toList());
         vo.setChildren(children);
         return vo;
+    }
+
+    @Override
+    public Set<String> getPermissionCodesByUserId(Long userId) {
+        List<SysUserRole> userRoles = userRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId)
+        );
+        List<Long> roleIds = userRoles.stream().map(SysUserRole::getRoleId).collect(Collectors.toList());
+        if (roleIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        List<SysRoleMenu> roleMenus = roleMenuMapper.selectList(
+                new LambdaQueryWrapper<SysRoleMenu>().in(SysRoleMenu::getRoleId, roleIds)
+        );
+        List<Long> menuIds = roleMenus.stream().map(SysRoleMenu::getMenuId).collect(Collectors.toList());
+        if (menuIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        List<SysMenu> menus = menuMapper.selectList(
+                new LambdaQueryWrapper<SysMenu>()
+                        .in(SysMenu::getId, menuIds)
+                        .eq(SysMenu::getType, "btn")
+                        .isNotNull(SysMenu::getPermission)
+                        .ne(SysMenu::getPermission, "")
+        );
+        return menus.stream().map(SysMenu::getPermission).collect(Collectors.toSet());
     }
 }

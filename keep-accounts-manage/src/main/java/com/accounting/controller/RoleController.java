@@ -1,5 +1,6 @@
 package com.accounting.controller;
 
+import com.accounting.common.RequirePermission;
 import com.accounting.common.Result;
 import com.accounting.dto.RoleCreateDTO;
 import com.accounting.dto.RoleUpdateDTO;
@@ -23,15 +24,24 @@ public class RoleController {
         return Result.success(roleService.list());
     }
 
+    @RequirePermission("sys:role:create")
     @PostMapping
     public Result<Void> create(@Valid @RequestBody RoleCreateDTO dto) {
         roleService.create(dto);
         return Result.success();
     }
 
+    @RequirePermission("sys:role:edit")
     @PutMapping
     public Result<Void> update(@Valid @RequestBody RoleUpdateDTO dto) {
         roleService.update(dto);
+        return Result.success();
+    }
+
+    @RequirePermission("sys:role:delete")
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@PathVariable Long id) {
+        roleService.delete(id);
         return Result.success();
     }
 
@@ -40,6 +50,7 @@ public class RoleController {
         return Result.success(roleService.getMenuIdsByRoleId(roleId));
     }
 
+    @RequirePermission("sys:role:assign")
     @PutMapping("/{roleId}/menus")
     public Result<Void> assignMenus(@PathVariable Long roleId, @RequestBody List<Long> menuIds) {
         roleService.assignMenus(roleId, menuIds);

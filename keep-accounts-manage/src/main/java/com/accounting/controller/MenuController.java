@@ -1,5 +1,6 @@
 package com.accounting.controller;
 
+import com.accounting.common.RequirePermission;
 import com.accounting.common.Result;
 import com.accounting.dto.MenuCreateDTO;
 import com.accounting.dto.MenuUpdateDTO;
@@ -23,18 +24,21 @@ public class MenuController {
         return Result.success(menuService.queryTree());
     }
 
+    @RequirePermission("sys:menu:create")
     @PostMapping
     public Result<Void> create(@Valid @RequestBody MenuCreateDTO dto) {
         menuService.create(dto);
         return Result.success();
     }
 
+    @RequirePermission("sys:menu:edit")
     @PutMapping
     public Result<Void> update(@Valid @RequestBody MenuUpdateDTO dto) {
         menuService.update(dto);
         return Result.success();
     }
 
+    @RequirePermission("sys:menu:delete")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         menuService.delete(id);
