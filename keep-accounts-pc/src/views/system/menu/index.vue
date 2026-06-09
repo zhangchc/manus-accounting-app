@@ -10,6 +10,15 @@ const typeConfig = {
   btn:  { label: '按钮', bg: '#FFF7ED', color: '#F7971E' },
 }
 
+const iconOptions = [
+  'Setting', 'Iphone', 'User', 'Avatar', 'Menu',
+  'Document', 'Notebook', 'CollectionTag', 'Lock',
+  'PriceTag', 'Reading', 'Files', 'HomeFilled',
+  'Monitor', 'DataAnalysis', 'Odometer', 'Operation',
+  'Folder', 'Tools', 'Goods', 'Key', 'Edit', 'Delete',
+  'Search', 'Refresh', 'Plus',
+]
+
 const menuTree = ref([])
 
 onMounted(async () => {
@@ -327,7 +336,7 @@ const fieldStyle = {
           <div style="font-size:13px;color:#475569;margin-bottom:6px;font-weight:500;">图标</div>
           <select v-model="form.icon" :style="{...fieldStyle, cursor:'pointer'}">
             <option value="">选择图标</option>
-            <option v-for="ic in ['Settings','Users','Shield','Menu','Smartphone','BookOpen','Tag','FileText']" :key="ic" :value="ic">{{ ic }}</option>
+            <option v-for="ic in iconOptions" :key="ic" :value="ic">{{ ic }}</option>
           </select>
         </div>
       </div>
