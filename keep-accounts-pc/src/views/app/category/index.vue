@@ -1,39 +1,61 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { Plus, Edit, Delete, WarningFilled, Close, CollectionTag } from '@element-plus/icons-vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { Plus, Edit, Delete, WarningFilled, Close, CollectionTag, Search } from '@element-plus/icons-vue'
+import { getAppCategoryList } from '@/api/app-category'
+import { ElMessage } from 'element-plus'
 
 const fieldStyle = { height: '36px', padding: '0 12px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px', color: '#334155', outline: 'none', width: '100%', boxSizing: 'border-box' }
 
 const tab = ref('expense')
+const searchName = ref('')
+const loading = ref(false)
 
 const cats = ref({
-  expense: [
-    { id: 1, icon: '🍜', name: '餐饮', sort: 1, type: 'expense', isSystem: true },
-    { id: 2, icon: '🚇', name: '交通', sort: 2, type: 'expense', isSystem: true },
-    { id: 3, icon: '🛒', name: '购物', sort: 3, type: 'expense', isSystem: true },
-    { id: 4, icon: '🏠', name: '住房', sort: 4, type: 'expense', isSystem: true },
-    { id: 5, icon: '💊', name: '医疗', sort: 5, type: 'expense', isSystem: true },
-    { id: 6, icon: '📚', name: '教育', sort: 6, type: 'expense', isSystem: true },
-    { id: 7, icon: '🎮', name: '娱乐', sort: 7, type: 'expense', isSystem: true },
-    { id: 8, icon: '👗', name: '服饰', sort: 8, type: 'expense', isSystem: true },
-    { id: 9, icon: '☕', name: '咖啡', sort: 9, type: 'expense', isSystem: true },
-    { id: 10, icon: '🚗', name: '汽车', sort: 10, type: 'expense', isSystem: true },
-    { id: 11, icon: '✈️', name: '旅行', sort: 11, type: 'expense', isSystem: true },
-    { id: 12, icon: '🐾', name: '宠物', sort: 12, type: 'expense', isSystem: true },
-    { id: 13, icon: '💄', name: '美容', sort: 13, type: 'expense', isSystem: true },
-    { id: 14, icon: '🏋️', name: '运动', sort: 14, type: 'expense', isSystem: true },
-    { id: 15, icon: '🎁', name: '礼品', sort: 15, type: 'expense', isSystem: true },
-  ],
-  income: [
-    { id: 101, icon: '💼', name: '工资', sort: 1, type: 'income', isSystem: true },
-    { id: 102, icon: '🎁', name: '奖金', sort: 2, type: 'income', isSystem: true },
-    { id: 103, icon: '📈', name: '理财', sort: 3, type: 'income', isSystem: true },
-    { id: 104, icon: '🏡', name: '租金', sort: 4, type: 'income', isSystem: true },
-    { id: 105, icon: '💰', name: '兼职', sort: 5, type: 'income', isSystem: true },
-    { id: 106, icon: '🎉', name: '红包', sort: 6, type: 'income', isSystem: true },
-    { id: 107, icon: '📦', name: '退款', sort: 7, type: 'income', isSystem: true },
-    { id: 108, icon: '💎', name: '其他收入', sort: 8, type: 'income', isSystem: true },
-  ]
+  expense: [],
+  income: []
+})
+
+function mapType(type) {
+  return type === 1 ? 'expense' : 'income'
+}
+
+async function loadCategories() {
+  loading.value = true
+  try {
+    const typeParam = tab.value === 'expense' ? 1 : 2
+    const data = await getAppCategoryList({
+      name: searchName.value || undefined,
+      type: typeParam,
+      page: 1,
+      pageSize: 100
+    })
+    const list = (data.records || []).map(item => ({
+      id: item.id,
+      icon: item.icon,
+      name: item.name,
+      sort: item.sortOrder,
+      type: mapType(item.type),
+      isSystem: item.userId === 0
+    }))
+    cats.value[tab.value] = list
+  } catch (e) {
+    ElMessage.error('加载分类列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSearch() {
+  loadCategories()
+}
+
+watch(tab, () => {
+  searchName.value = ''
+  loadCategories()
+})
+
+onMounted(() => {
+  loadCategories()
 })
 
 const iconOptions = ['🍜','🚇','🛒','🏠','💊','📚','🎮','👗','☕','🚗','✈️','🐾','💄','🏋️','🎁','💼','📈','🏡','💰','🎉','📦','💎','🍕','🍔','🍦','🎵','🎬','📱','💻','🔑','🧾']
@@ -123,9 +145,16 @@ function handleSave() {
             </span>
           </button>
         </div>
-        <button @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);">
-          <el-icon style="font-size:15px;"><Plus /></el-icon>新增分类
-        </button>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="position:relative;">
+            <input v-model="searchName" placeholder="搜索分类名称" :style="{...fieldStyle, width:'200px',paddingLeft:'36px'}" @keyup.enter="handleSearch" />
+            <el-icon style="position:absolute;left:10px;top:50%;transform:'translateY(-50%)';font-size:14px;color:#94A3B8;"><Search /></el-icon>
+          </div>
+          <button @click="handleSearch" style="height:36px;padding:0 16px;background:#F0F2F8;color:#64748B;border:1px solid #E2E8F0;border-radius:10px;cursor:pointer;font-size:13px;">搜索</button>
+          <button @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);">
+            <el-icon style="font-size:15px;"><Plus /></el-icon>新增分类
+          </button>
+        </div>
       </div>
     </div>
 
@@ -142,7 +171,7 @@ function handleSave() {
           background:'#fff',borderRadius:'16px',padding:'20px 16px',
           boxShadow: hoveredId===cat.id ? '0 8px 28px rgba(102,126,234,0.18)' : '0 2px 16px rgba(0,0,0,0.06)',
           transform: hoveredId===cat.id ? 'translateY(-3px)' : 'none',
-          transition:'all 0.2s',cursor:'default',position:'relative',
+          transition:'box-shadow 0.2s, transform 0.2s',cursor:'default',position:'relative',
           display:'flex',flexDirection:'column',alignItems:'center',gap:'8px'
         }">
         <div v-if="cat.isSystem" style="position:absolute;top:10px;right:10px;">
@@ -153,7 +182,8 @@ function handleSave() {
         </div>
         <div style="font-size:14px;font-weight:600;color:#1E293B;text-align:center;">{{ cat.name }}</div>
         <div style="font-size:11px;color:#94A3B8;">排序: {{ cat.sort }}</div>
-        <div v-if="hoveredId === cat.id" style="display:flex;gap:8px;margin-top:4px;">
+        <div style="display:flex;gap:8px;margin-top:4px;opacity:0;pointer-events:none;transition:opacity 0.2s;"
+          :style="hoveredId === cat.id ? { opacity: 1, pointerEvents: 'auto' } : {}">
           <button @click="openEdit(cat)" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:3px;font-size:12px;font-weight:500;">
             <el-icon style="font-size:11px;"><Edit /></el-icon>编辑
           </button>

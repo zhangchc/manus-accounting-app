@@ -1,6 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { Search, RefreshRight, Download, View, Delete, WarningFilled, ArrowLeft, ArrowRight, Close } from '@element-plus/icons-vue'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Search, RefreshRight, Download, View, ArrowLeft, ArrowRight, Close } from '@element-plus/icons-vue'
+import { getRecordList, getRecordCategories, exportRecords } from '@/api/record'
 
 const thSt = { padding: '12px 20px', fontSize: '12px', color: '#94A3B8', fontWeight: '600', textAlign: 'left', whiteSpace: 'nowrap', background: '#F8FAFC', borderBottom: '1px solid #F1F5F9', letterSpacing: '0.03em' }
 const tdSt = { padding: '14px 20px', fontSize: '13px', color: '#334155', borderBottom: '1px solid #F8FAFC', whiteSpace: 'nowrap' }
@@ -19,53 +21,19 @@ const searchUser = ref('')
 const typeFilter = ref('all')
 const dateStart = ref('')
 const dateEnd = ref('')
-const searchCategory = ref('')
+const searchCategoryId = ref('')
 const minAmount = ref('')
 const maxAmount = ref('')
 const page = ref(1)
+
 const detail = ref(null)
-const deleteId = ref(null)
+const records = ref([])
+const total = ref(0)
+const loading = ref(false)
+const exporting = ref(false)
+const categories = ref([])
 
-const deleteVisible = computed({
-  get: () => deleteId.value !== null,
-  set: (v) => { if (!v) deleteId.value = null }
-})
-
-const records = ref([
-  { id: 1, user: '小明同学', category: '餐饮', categoryIcon: '🍜', type: 'expense', amount: 45.5, note: '午饭·公司附近沙县小吃', bookName: '日常账本', date: '2026-06-08' },
-  { id: 2, user: '花花🌸', category: '工资', categoryIcon: '💼', type: 'income', amount: 12000, note: '6月工资发放', bookName: '工作账本', date: '2026-06-05' },
-  { id: 3, user: '节俭达人', category: '交通', categoryIcon: '🚇', type: 'expense', amount: 5.0, note: '地铁充值', bookName: '日常账本', date: '2026-06-08' },
-  { id: 4, user: '小富即安', category: '购物', categoryIcon: '🛒', type: 'expense', amount: 238.0, note: '超市购物，买了一些零食和日用品', bookName: '日常账本', date: '2026-06-04' },
-  { id: 5, user: '花花🌸', category: '奖金', categoryIcon: '🎁', type: 'income', amount: 3000, note: '季度绩效奖金', bookName: '工作账本', date: '2026-05-28' },
-  { id: 6, user: '记账小能手', category: '房租', categoryIcon: '🏠', type: 'expense', amount: 2800, note: '6月房租', bookName: '固定支出', date: '2026-06-01' },
-  { id: 7, user: 'Alex大叔', category: '咖啡', categoryIcon: '☕', type: 'expense', amount: 28.0, note: '瑞幸拿铁', bookName: '日常账本', date: '2026-06-03' },
-  { id: 8, user: '小明同学', category: '数码', categoryIcon: '📱', type: 'expense', amount: 1299, note: '手机壳+屏幕贴膜', bookName: '日常账本', date: '2026-05-30' },
-  { id: 9, user: '月光族', category: '餐饮', categoryIcon: '🍕', type: 'expense', amount: 89.0, note: '朋友聚餐·外婆家餐厅', bookName: '日常账本', date: '2026-05-25' },
-  { id: 10, user: '节俭达人', category: '理财', categoryIcon: '📈', type: 'income', amount: 560.0, note: '基金收益', bookName: '投资账本', date: '2026-06-07' },
-  { id: 11, user: '小富即安', category: '打车', categoryIcon: '🚗', type: 'expense', amount: 32.0, note: '滴滴打车', bookName: '日常账本', date: '2026-05-24' },
-  { id: 12, user: '记账小能手', category: '工资', categoryIcon: '💼', type: 'income', amount: 9500, note: '5月工资', bookName: '工作账本', date: '2026-05-05' },
-])
-
-const categories = ['餐饮', '交通', '购物', '房租', '数码', '咖啡', '打车', '工资', '奖金', '理财']
-
-const filtered = computed(() => {
-  return records.value.filter(r =>
-    (!searchUser.value || r.user.includes(searchUser.value)) &&
-    (!searchCategory.value || r.category.includes(searchCategory.value)) &&
-    (typeFilter.value === 'all' || r.type === typeFilter.value) &&
-    (!minAmount.value || r.amount >= Number(minAmount.value)) &&
-    (!maxAmount.value || r.amount <= Number(maxAmount.value))
-  )
-})
-
-const paged = computed(() => {
-  const start = (page.value - 1) * 10
-  return filtered.value.slice(start, start + 10)
-})
-
-const totalExpense = computed(() => filtered.value.filter(r => r.type === 'expense').reduce((s, r) => s + r.amount, 0))
-const totalIncome = computed(() => filtered.value.filter(r => r.type === 'income').reduce((s, r) => s + r.amount, 0))
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / 10)))
+const totalPages = computed(() => Math.max(1, Math.ceil(total.value / 10)))
 
 const pages = computed(() => {
   const tp = totalPages.value
@@ -81,29 +49,92 @@ const pages = computed(() => {
   return result
 })
 
-function handleDelete(id) {
-  deleteId.value = id
-}
+const totalExpense = computed(() =>
+  records.value.filter(r => r.type === 1).reduce((s, r) => s + (r.amount || 0), 0)
+)
+const totalIncome = computed(() =>
+  records.value.filter(r => r.type === 2).reduce((s, r) => s + (r.amount || 0), 0)
+)
 
-function confirmDelete() {
-  if (deleteId.value !== null) {
-    records.value = records.value.filter(r => r.id !== deleteId.value)
-    if (detail.value?.id === deleteId.value) detail.value = null
+async function loadCategories() {
+  try {
+    const data = await getRecordCategories()
+    categories.value = data || []
+  } catch (e) {
+    // silent fail, dropdown will be empty
   }
-  deleteId.value = null
 }
 
-function handleSearch() { page.value = 1 }
+async function loadRecords() {
+  loading.value = true
+  try {
+    const params = {
+      userNickName: searchUser.value || undefined,
+      type: typeFilter.value !== 'all' ? (typeFilter.value === 'expense' ? 1 : 2) : undefined,
+      categoryId: searchCategoryId.value || undefined,
+      startDate: dateStart.value || undefined,
+      endDate: dateEnd.value || undefined,
+      minAmount: minAmount.value || undefined,
+      maxAmount: maxAmount.value || undefined,
+      page: page.value,
+      pageSize: 10,
+    }
+    const data = await getRecordList(params)
+    records.value = data.records || []
+    total.value = data.total || 0
+  } catch (e) {
+    ElMessage.error('加载记录列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const params = {
+      userNickName: searchUser.value || undefined,
+      type: typeFilter.value !== 'all' ? (typeFilter.value === 'expense' ? 1 : 2) : undefined,
+      categoryId: searchCategoryId.value || undefined,
+      startDate: dateStart.value || undefined,
+      endDate: dateEnd.value || undefined,
+      minAmount: minAmount.value || undefined,
+      maxAmount: maxAmount.value || undefined,
+    }
+    await exportRecords(params)
+  } catch (e) {
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
+function handleSearch() {
+  page.value = 1
+  loadRecords()
+}
+
 function handleReset() {
   searchUser.value = ''
   typeFilter.value = 'all'
-  searchCategory.value = ''
+  searchCategoryId.value = ''
   minAmount.value = ''
   maxAmount.value = ''
   dateStart.value = ''
   dateEnd.value = ''
   page.value = 1
+  loadRecords()
 }
+
+function handlePageChange(p) {
+  page.value = p
+  loadRecords()
+}
+
+onMounted(() => {
+  loadCategories()
+  loadRecords()
+})
 </script>
 
 <template>
@@ -113,7 +144,7 @@ function handleReset() {
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
         <div style="position:relative;">
           <el-icon style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94A3B8;font-size:13px;"><Search /></el-icon>
-          <input v-model="searchUser" placeholder="用户昵称搜索"
+          <input v-model="searchUser" placeholder="用户昵称搜索" @keyup.enter="handleSearch"
             style="width:200px;height:36px;padding:0 12px 0 32px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;font-size:13px;color:#334155;outline:none;box-sizing:border-box;" />
         </div>
         <div style="display:flex;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;height:36px;">
@@ -128,9 +159,9 @@ function handleReset() {
         <input v-model="dateEnd" type="date" style="width:136px;height:36px;padding:0 10px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;font-size:13px;color:#334155;outline:none;box-sizing:border-box;" />
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <select v-model="searchCategory" style="width:140px;height:36px;padding:0 10px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;font-size:13px;color:#334155;outline:none;cursor:pointer;">
+        <select v-model="searchCategoryId" style="width:140px;height:36px;padding:0 10px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;font-size:13px;color:#334155;outline:none;cursor:pointer;">
           <option value="">全部分类</option>
-          <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
+          <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.icon }} {{ c.name }}</option>
         </select>
         <input v-model="minAmount" type="number" placeholder="最小金额" style="width:110px;height:36px;padding:0 10px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;font-size:13px;color:#334155;outline:none;box-sizing:border-box;" />
         <span style="color:#94A3B8;font-size:13px;">~</span>
@@ -141,8 +172,8 @@ function handleReset() {
         <button @click="handleReset" style="height:36px;padding:0 16px;background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;">
           <el-icon style="font-size:13px;"><RefreshRight /></el-icon>重置
         </button>
-        <button style="height:36px;padding:0 16px;background:#F0FDF4;color:#11998E;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;font-weight:500;">
-          <el-icon style="font-size:13px;"><Download /></el-icon>导出Excel
+        <button @click="handleExport" :disabled="exporting" style="height:36px;padding:0 16px;background:#F0FDF4;color:#11998E;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;font-weight:500;">
+          <el-icon style="font-size:13px;"><Download /></el-icon>{{ exporting ? '导出中...' : '导出Excel' }}
         </button>
       </div>
     </div>
@@ -165,51 +196,49 @@ function handleReset() {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, i) in paged" :key="r.id"
+            <tr v-for="(r, i) in records" :key="r.id"
               @mouseenter="e => e.currentTarget.style.background = '#FAFBFF'"
               @mouseleave="e => e.currentTarget.style.background = '#fff'"
               style="transition:background 0.15s;">
               <td :style="{...tdSt, color:'#CBD5E1', width:'60px'}">{{ (page-1) * 10 + i + 1 }}</td>
               <td :style="tdSt">
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div :style="{width:'30px',height:'30px',borderRadius:'8px',background:avatarGradients[r.id % avatarGradients.length],display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:'11px',fontWeight:700,flexShrink:0}">
-                    {{ r.user[0] }}
+                  <div v-if="r.userAvatarUrl" style="width:30px;height:30px;border-radius:8px;overflow:hidden;flex-shrink:0;">
+                    <img :src="r.userAvatarUrl" style="width:100%;height:100%;object-fit:cover;" />
                   </div>
-                  <span style="font-weight:500;">{{ r.user }}</span>
+                  <div v-else :style="{width:'30px',height:'30px',borderRadius:'8px',background:avatarGradients[r.id % avatarGradients.length],display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:'11px',fontWeight:700,flexShrink:0}">
+                    {{ (r.userNickName || '?')[0] }}
+                  </div>
+                  <span style="font-weight:500;">{{ r.userNickName || '-' }}</span>
                 </div>
               </td>
               <td :style="tdSt">
                 <div style="display:flex;align-items:center;gap:6px;">
                   <span>{{ r.categoryIcon }}</span>
-                  <span>{{ r.category }}</span>
+                  <span>{{ r.categoryName }}</span>
                 </div>
               </td>
               <td :style="tdSt">
-                <span :style="{fontSize:'12px',padding:'2px 10px',borderRadius:'20px',background:r.type==='expense'?'#FFF1F2':'#F0FDF4',color:r.type==='expense'?'#F43F5E':'#11998E',fontWeight:500}">
-                  {{ r.type === 'expense' ? '支出' : '收入' }}
+                <span :style="{fontSize:'12px',padding:'2px 10px',borderRadius:'20px',background:r.type===1?'#FFF1F2':'#F0FDF4',color:r.type===1?'#F43F5E':'#11998E',fontWeight:500}">
+                  {{ r.type === 1 ? '支出' : '收入' }}
                 </span>
               </td>
-              <td :style="{...tdSt, fontWeight:700, fontSize:'14px', color: r.type==='expense'?'#F43F5E':'#11998E', textAlign:'right'}">
-                {{ r.type === 'expense' ? '-' : '+' }}¥{{ r.amount.toFixed(2) }}
+              <td :style="{...tdSt, fontWeight:700, fontSize:'14px', color: r.type===1?'#F43F5E':'#11998E', textAlign:'right'}">
+                {{ r.type === 1 ? '-' : '+' }}¥{{ (r.amount || 0).toFixed(2) }}
               </td>
-              <td :style="{...tdSt, maxWidth:'150px', overflow:'hidden', textOverflow:'ellipsis', color:'#475569'}" :title="r.note">{{ r.note }}</td>
-              <td :style="{...tdSt, color:'#94A3B8'}">{{ r.bookName }}</td>
-              <td :style="{...tdSt, color:'#94A3B8', fontSize:'12px'}">{{ r.date }}</td>
+              <td :style="{...tdSt, maxWidth:'150px', overflow:'hidden', textOverflow:'ellipsis', color:'#475569'}" :title="r.remark">{{ r.remark || '-' }}</td>
+              <td :style="{...tdSt, color:'#94A3B8'}">{{ r.bookName || '-' }}</td>
+              <td :style="{...tdSt, color:'#94A3B8', fontSize:'12px'}">{{ (r.recordTime || '').slice(0, 10) }}</td>
               <td :style="tdSt">
-                <div style="display:flex;gap:6px;">
-                  <button @click="detail = r" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
-                    <el-icon style="font-size:11px;"><View /></el-icon>查看
-                  </button>
-                  <button @click="handleDelete(r.id)" style="height:28px;padding:0 10px;background:#FFF1F2;color:#F43F5E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
-                    <el-icon style="font-size:11px;"><Delete /></el-icon>删除
-                  </button>
-                </div>
+                <button @click="detail = r" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                  <el-icon style="font-size:11px;"><View /></el-icon>查看
+                </button>
               </td>
             </tr>
           </tbody>
           <tfoot>
             <tr style="background:#F8FAFC;">
-              <td :colspan="4" :style="{...tdSt, fontWeight:600, color:'#1E293B', borderBottom:'none'}">汇总（当前筛选 {{ filtered.length }} 条）</td>
+              <td :colspan="4" :style="{...tdSt, fontWeight:600, color:'#1E293B', borderBottom:'none'}">汇总（当前页 {{ records.length }} 条，共 {{ total }} 条）</td>
               <td :style="{...tdSt, textAlign:'right', borderBottom:'none'}">
                 <div style="font-size:12px;color:#F43F5E;font-weight:600;">支出 ¥{{ totalExpense.toFixed(2) }}</div>
                 <div style="font-size:12px;color:#11998E;font-weight:600;">收入 ¥{{ totalIncome.toFixed(2) }}</div>
@@ -221,20 +250,25 @@ function handleReset() {
         </table>
       </div>
 
-      <!-- Custom pagination -->
+      <!-- Empty state -->
+      <div v-if="!loading && records.length === 0" style="padding:60px;text-align:center;color:#94A3B8;">
+        <div style="font-size:14px;">暂无记录</div>
+      </div>
+
+      <!-- Pagination -->
       <div style="display:flex;justify-content:flex-end;padding:12px 16px;align-items:center;gap:4px;">
-        <span style="font-size:12px;color:#94A3B8;margin-right:8px;">共 {{ filtered.length }} 条</span>
-        <button :disabled="page <= 1" @click="page--"
-          style="width:32px;height:32px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:1;"
+        <span style="font-size:12px;color:#94A3B8;margin-right:8px;">共 {{ total }} 条</span>
+        <button :disabled="page <= 1" @click="handlePageChange(page - 1)"
+          style="width:32px;height:32px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;"
           :style="{opacity: page <= 1 ? 0.4 : 1, cursor: page <= 1 ? 'not-allowed' : 'pointer'}">
           <el-icon style="font-size:14px;color:#64748B;"><ArrowLeft /></el-icon>
         </button>
         <template v-for="(p, idx) in pages" :key="idx">
           <span v-if="p === '...'" style="width:32px;text-align:center;color:#94A3B8;font-size:13px;">…</span>
-          <button v-else @click="page = p"
+          <button v-else @click="handlePageChange(p)"
             :style="{width:'32px',height:'32px',border:'none',borderRadius:'8px',background: p===page ? 'linear-gradient(135deg,#667EEA,#764BA2)' : '#fff',color: p===page ? '#fff' : '#475569',cursor:'pointer',fontSize:'13px',fontWeight: p===page ? 600 : 400}">{{ p }}</button>
         </template>
-        <button :disabled="page >= totalPages" @click="page++"
+        <button :disabled="page >= totalPages" @click="handlePageChange(page + 1)"
           style="width:32px;height:32px;border:1px solid #E2E8F0;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;"
           :style="{opacity: page >= totalPages ? 0.4 : 1, cursor: page >= totalPages ? 'not-allowed' : 'pointer'}">
           <el-icon style="font-size:14px;color:#64748B;"><ArrowRight /></el-icon>
@@ -255,60 +289,39 @@ function handleReset() {
               <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">用户</span>
               <span style="font-size:14px;color:#1E293B;">
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <div :style="{width:'24px',height:'24px',borderRadius:'6px',background:'linear-gradient(135deg,#667EEA,#764BA2)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:'10px',fontWeight:700}">{{ detail.user[0] }}</div>
-                  {{ detail.user }}
+                  <div :style="{width:'24px',height:'24px',borderRadius:'6px',background:avatarGradients[detail.id % avatarGradients.length],display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:'10px',fontWeight:700}">{{ (detail.userNickName || '?')[0] }}</div>
+                  {{ detail.userNickName || '-' }}
                 </div>
               </span>
             </div>
             <div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #F8FAFC;">
               <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">分类</span>
-              <span style="font-size:14px;color:#1E293B;">{{ detail.categoryIcon }} {{ detail.category }}</span>
+              <span style="font-size:14px;color:#1E293B;">{{ detail.categoryIcon }} {{ detail.categoryName }}</span>
             </div>
             <div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #F8FAFC;">
               <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">类型</span>
-              <span :style="{fontSize:'12px',padding:'2px 10px',borderRadius:'20px',background:detail.type==='expense'?'#FFF1F2':'#F0FDF4',color:detail.type==='expense'?'#F43F5E':'#11998E',fontWeight:500}">{{ detail.type === 'expense' ? '支出' : '收入' }}</span>
+              <span :style="{fontSize:'12px',padding:'2px 10px',borderRadius:'20px',background:detail.type===1?'#FFF1F2':'#F0FDF4',color:detail.type===1?'#F43F5E':'#11998E',fontWeight:500}">{{ detail.type === 1 ? '支出' : '收入' }}</span>
             </div>
             <div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #F8FAFC;">
               <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">金额</span>
-              <span :style="{fontSize:'24px',fontWeight:700,color:detail.type==='expense'?'#F43F5E':'#11998E'}">{{ detail.type === 'expense' ? '-' : '+' }}¥{{ detail.amount.toFixed(2) }}</span>
+              <span :style="{fontSize:'24px',fontWeight:700,color:detail.type===1?'#F43F5E':'#11998E'}">{{ detail.type === 1 ? '-' : '+' }}¥{{ (detail.amount || 0).toFixed(2) }}</span>
             </div>
             <div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #F8FAFC;">
               <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">备注</span>
-              <span style="font-size:14px;color:#1E293B;">{{ detail.note || '—' }}</span>
+              <span style="font-size:14px;color:#1E293B;">{{ detail.remark || '—' }}</span>
             </div>
             <div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #F8FAFC;">
-              <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">记账日期</span>
-              <span style="font-size:14px;color:#1E293B;">{{ detail.date }}</span>
+              <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">记账时间</span>
+              <span style="font-size:14px;color:#1E293B;">{{ detail.recordTime || '-' }}</span>
             </div>
             <div style="display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #F8FAFC;">
               <span style="width:80px;font-size:13px;color:#94A3B8;flex-shrink:0;">所属账本</span>
-              <span style="font-size:14px;color:#1E293B;">{{ detail.bookName }}</span>
+              <span style="font-size:14px;color:#1E293B;">{{ detail.bookName || '-' }}</span>
             </div>
           </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:16px;border-top:1px solid #F1F5F9;margin-top:8px;">
-            <button @click="handleDelete(detail.id); detail = null"
-              style="background:none;border:none;color:#F43F5E;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:4px;">
-              <el-icon style="font-size:13px;"><Delete /></el-icon>删除此记录
-            </button>
+          <div style="display:flex;justify-content:flex-end;padding-top:16px;border-top:1px solid #F1F5F9;margin-top:8px;">
             <button @click="detail = null" style="height:36px;padding:0 20px;background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:10px;cursor:pointer;font-size:13px;">关闭</button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Confirm overlay -->
-    <div v-if="deleteVisible" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;" @click="deleteId = null">
-      <div style="background:#fff;border-radius:16px;width:380px;max-width:90vw;padding:32px 28px;box-shadow:0 16px 48px rgba(244,63,94,0.14),0 4px 16px rgba(0,0,0,0.08);text-align:center;" @click.stop>
-        <div style="width:64px;height:64px;border-radius:50%;background:#FFF1F2;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-          <el-icon style="font-size:28px;color:#F43F5E;"><WarningFilled /></el-icon>
-        </div>
-        <div style="font-size:17px;font-weight:700;color:#1E293B;margin-bottom:8px;">确认删除</div>
-        <div style="font-size:14px;color:#64748B;line-height:1.6;margin-bottom:24px;">
-          此操作不可逆，删除后该记录数据将无法恢复。<br />确定要继续吗？
-        </div>
-        <div style="display:flex;gap:10px;justify-content:center;">
-          <button @click="deleteId = null" style="height:40px;padding:0 24px;border:1px solid #E2E8F0;border-radius:10px;background:#fff;color:#64748B;cursor:pointer;font-size:14px;font-weight:500;">取消</button>
-          <button @click="confirmDelete" style="height:40px;padding:0 28px;border:none;border-radius:10px;background:linear-gradient(135deg,#F43F5E,#E11D48);color:#fff;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(244,63,94,0.35);">确认删除</button>
         </div>
       </div>
     </div>

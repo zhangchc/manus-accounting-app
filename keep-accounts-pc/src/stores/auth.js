@@ -6,8 +6,8 @@ import { addMenuRoutes } from '@/router'
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('admin_token') || '')
   const userInfo = ref(JSON.parse(localStorage.getItem('admin_user') || 'null'))
-  const permissions = ref([])
-  const menus = ref([])
+  const permissions = ref(JSON.parse(localStorage.getItem('admin_permissions') || '[]'))
+  const menus = ref(JSON.parse(localStorage.getItem('admin_menus') || '[]'))
 
   const isLoggedIn = () => !!token.value
 
@@ -17,6 +17,8 @@ export const useAuthStore = defineStore('auth', () => {
       const info = await getUserInfo()
       menus.value = info.menus || []
       permissions.value = info.permissions || []
+      localStorage.setItem('admin_menus', JSON.stringify(menus.value))
+      localStorage.setItem('admin_permissions', JSON.stringify(permissions.value))
       addMenuRoutes(menus.value)
       userInfo.value = { id: info.userId, username: info.username, nickname: info.nickname }
       localStorage.setItem('admin_user', JSON.stringify(userInfo.value))
@@ -35,6 +37,8 @@ export const useAuthStore = defineStore('auth', () => {
     const info = await getUserInfo()
     menus.value = info.menus || []
     permissions.value = info.permissions || []
+    localStorage.setItem('admin_menus', JSON.stringify(menus.value))
+    localStorage.setItem('admin_permissions', JSON.stringify(permissions.value))
     addMenuRoutes(menus.value)
     userInfo.value = { id: info.userId, username: info.username, nickname: info.nickname }
     localStorage.setItem('admin_user', JSON.stringify(userInfo.value))
@@ -53,6 +57,8 @@ export const useAuthStore = defineStore('auth', () => {
     menus.value = []
     localStorage.removeItem('admin_token')
     localStorage.removeItem('admin_user')
+    localStorage.removeItem('admin_menus')
+    localStorage.removeItem('admin_permissions')
   }
 
   return { token, userInfo, permissions, menus, isLoggedIn, hasPermission, login, fetchUserInfo, logout }

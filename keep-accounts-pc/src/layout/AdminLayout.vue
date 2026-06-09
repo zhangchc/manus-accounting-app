@@ -129,7 +129,7 @@ watch(() => auth.menus, (menus) => {
               width:'100%',display:'flex',alignItems:'center',gap:'8px',
               padding:'9px 10px',
               background: isActive(item.route) ? 'rgba(255,255,255,0.1)' : 'transparent',
-              border:'none',cursor:'pointer',fontSize:'13px',textAlign:'left',transition:'all 0.18s',boxSizing:'border-box',
+              border:'none',cursor:'pointer',fontSize:'14px',textAlign:'left',transition:'all 0.18s',boxSizing:'border-box',
               color: isActive(item.route) ? '#fff' : 'rgba(255,255,255,0.48)',
               borderRadius:'10px',position:'relative',
             }"
@@ -137,7 +137,7 @@ watch(() => auth.menus, (menus) => {
               @mouseleave="e => { if (!isActive(item.route)) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.48)' } }"
             >
               <span v-if="isActive(item.route)" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;border-radius:0 2px 2px 0;background:linear-gradient(180deg,#A5B4FC,#C084FC);"></span>
-              <el-icon v-if="item.icon" style="font-size:14px;flex-shrink:0;"><component :is="item.icon" /></el-icon>
+              <el-icon v-if="item.icon" style="font-size:15px;flex-shrink:0;"><component :is="item.icon" /></el-icon>
               <span style="line-height:1;font-weight:400;" :style="{fontWeight: isActive(item.route) ? 600 : 400}">{{ item.label }}</span>
             </button>
           </div>
@@ -148,17 +148,17 @@ watch(() => auth.menus, (menus) => {
               width:'100%',display:'flex',alignItems:'center',
               padding:'8px 8px',background:'transparent',border:'none',cursor:'pointer',
               color: isGroupActive(item) ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.3)',
-              fontSize:'13px',fontWeight:500,letterSpacing:'0',
+              fontSize:'14px',fontWeight:500,letterSpacing:'0',
               justifyContent:'space-between',boxSizing:'border-box',transition:'color 0.18s',
             }"
               @mouseenter="e => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)' }"
               @mouseleave="e => { e.currentTarget.style.color = isGroupActive(item) ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.3)' }"
             >
               <span style="display:flex;align-items:center;gap:6px;">
-                <el-icon v-if="item.icon" style="font-size:12px;"><component :is="item.icon" /></el-icon>
+                <el-icon v-if="item.icon" style="font-size:13px;"><component :is="item.icon" /></el-icon>
                 {{ item.label }}
               </span>
-              <el-icon :style="{transform: expanded.includes(item.key) ? 'rotate(0deg)' : 'rotate(-90deg)',transition:'transform 0.22s',flexShrink:0,opacity:0.5,fontSize:'11px'}"><ArrowDown /></el-icon>
+              <el-icon :style="{transform: expanded.includes(item.key) ? 'rotate(0deg)' : 'rotate(-90deg)',transition:'transform 0.22s',flexShrink:0,opacity:0.5,fontSize:'12px'}"><ArrowDown /></el-icon>
             </button>
             <div v-if="expanded.includes(item.key)" style="margin-bottom:4px;">
               <div v-for="child in item.children" :key="child.key" style="padding:0;">
@@ -167,7 +167,7 @@ watch(() => auth.menus, (menus) => {
                   padding:'8px 10px 8px 32px',
                   background: isActive(child.route) ? 'rgba(255,255,255,0.1)' : 'transparent',
                   border:'none',cursor:'pointer',
-                  fontSize:'13px',textAlign:'left',transition:'all 0.18s',boxSizing:'border-box',
+                  fontSize:'14px',textAlign:'left',transition:'all 0.18s',boxSizing:'border-box',
                   color: isActive(child.route) ? '#fff' : 'rgba(255,255,255,0.48)',
                   borderRadius:'10px',position:'relative',
                 }"
@@ -175,8 +175,8 @@ watch(() => auth.menus, (menus) => {
                   @mouseleave="e => { if (!isActive(child.route)) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.48)' } }"
                 >
                   <span v-if="isActive(child.route)" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;border-radius:0 2px 2px 0;background:linear-gradient(180deg,#A5B4FC,#C084FC);"></span>
-                  <el-icon v-if="child.icon" style="font-size:14px;flex-shrink:0;"><component :is="child.icon" /></el-icon>
-                  <span style="font-size:13px;line-height:1;" :style="{fontWeight: isActive(child.route) ? 600 : 400}">{{ child.label }}</span>
+                  <el-icon v-if="child.icon" style="font-size:15px;flex-shrink:0;"><component :is="child.icon" /></el-icon>
+                  <span style="font-size:14px;line-height:1;" :style="{fontWeight: isActive(child.route) ? 600 : 400}">{{ child.label }}</span>
                 </button>
               </div>
             </div>
