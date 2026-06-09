@@ -1,0 +1,70 @@
+/* 全局样式变量 - 蓝紫色主题 简约清爽温馨风格 */
+
+/* 主题色 - 蓝紫渐变 */
+$primary-color: #7B9EF5;
+$primary-light: #A8C0F7;
+$primary-dark: #5B82E0;
+$primary-purple: #B8A0F5;
+
+/* 渐变 */
+$gradient-primary: linear-gradient(135deg, #7B9EF5 0%, #A8C0F7 50%, #B8A0F5 100%);
+$gradient-btn: linear-gradient(135deg, #7B9EF5, #B8A0F5);
+
+/* 分类图标背景色 */
+$icon-bg-food: #FFF0ED;
+$icon-bg-transport: #E8F8F0;
+$icon-bg-shopping: #EBF2FF;
+$icon-bg-daily: #E8F8F0;
+$icon-bg-fruit: #FFE8EC;
+$icon-bg-snack: #FFF5E6;
+$icon-bg-sport: #E5F8F2;
+$icon-bg-entertainment: #F0EAFF;
+$icon-bg-communication: #EBF2FF;
+$icon-bg-clothing: #FFEEF5;
+$icon-bg-beauty: #FFE8F0;
+$icon-bg-housing: #FFF2E8;
+$icon-bg-salary: #FFF8E6;
+
+/* 温馨辅助色 */
+$warm-pink: #F5A0B5;
+$warm-orange: #F5C07C;
+$warm-green: #8DD5B0;
+$warm-purple: #B8A0F5;
+
+/* 文字颜色 */
+$text-primary: #2D3142;
+$text-secondary: #6B7280;
+$text-hint: #9CA3AF;
+$text-white: #FFFFFF;
+
+/* 背景色 */
+$bg-page: #FAFBFE;
+$bg-card: #FFFFFF;
+$bg-input: #F3F4F8;
+
+/* 收入/支出颜色 */
+$color-expense: #F5707A;
+$color-income: #5CC9A7;
+
+/* 边框 */
+$border-color: #EEEEF3;
+$border-radius: 16rpx;
+$border-radius-lg: 24rpx;
+$border-radius-xl: 32rpx;
+
+/* 阴影 - Soft Glass 双层阴影 */
+$shadow-sm: 0 1rpx 2rpx rgba(45, 49, 66, 0.04), 0 2rpx 12rpx rgba(123, 158, 245, 0.06);
+$shadow-md: 0 2rpx 4rpx rgba(45, 49, 66, 0.04), 0 8rpx 28rpx rgba(123, 158, 245, 0.10);
+$shadow-lg: 0 4rpx 8rpx rgba(45, 49, 66, 0.05), 0 16rpx 48rpx rgba(123, 158, 245, 0.18);
+$shadow-press: 0 1rpx 2rpx rgba(45, 49, 66, 0.06), 0 4rpx 12rpx rgba(123, 158, 245, 0.10);
+
+/* 卡片顶部高光描边色 */
+$hairline: rgba(45, 49, 66, 0.06);
+$top-glow: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%);
+
+/* 间距 */
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 48rpx;

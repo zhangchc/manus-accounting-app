@@ -10,45 +10,45 @@ Thumbs.db
 *~
 
 # =====================
-# 后端 Backend (Java / Maven)（路径相对项目根 manus-accounting-app）
+# 后端 Backend (Java / Maven) — keep-accounts-server
 # =====================
-/backend/target/
-/backend/*.iml
-/backend/.idea/
-/backend/.settings/
-/backend/.project
-/backend/.classpath
-/backend/out/
-/backend/*.jar
-/backend/*.war
-/backend/*.ear
-/backend/*.class
+/keep-accounts-server/target/
+/keep-accounts-server/*.iml
+/keep-accounts-server/.idea/
+/keep-accounts-server/.settings/
+/keep-accounts-server/.project
+/keep-accounts-server/.classpath
+/keep-accounts-server/out/
+/keep-accounts-server/*.jar
+/keep-accounts-server/*.war
+/keep-accounts-server/*.ear
+/keep-accounts-server/*.class
 
 # Maven
-/backend/pom.xml.tag
-/backend/pom.xml.releaseBackup
-/backend/release.properties
-/backend/dependency-reduced-pom.xml
-/backend/.mvn/wrapper/maven-wrapper.jar
+/keep-accounts-server/pom.xml.tag
+/keep-accounts-server/pom.xml.releaseBackup
+/keep-accounts-server/release.properties
+/keep-accounts-server/dependency-reduced-pom.xml
+/keep-accounts-server/.mvn/wrapper/maven-wrapper.jar
 
 # Spring Boot
-/backend/logs/
-/backend/*.log
+/keep-accounts-server/logs/
+/keep-accounts-server/*.log
 
 # 本地配置（含敏感信息可放这里，若需提交模板可改用 application-local.yml）
 # backend/src/main/resources/application-local.yml
 
 # =====================
-# 前端 Frontend (UniApp / Node)（路径相对项目根 manus-accounting-app）
+# 前端 Frontend (UniApp / Node) — keep-accounts-wxapp
 # =====================
 # 依赖
-/frontend/node_modules/
-/frontend/.pnpm-store/
+/keep-accounts-wxapp/node_modules/
+/keep-accounts-wxapp/.pnpm-store/
 
 # UniApp 构建产物
-/frontend/unpackage/
-/frontend/dist/
-/frontend/.sourcemap/
+/keep-accounts-wxapp/unpackage/
+/keep-accounts-wxapp/dist/
+/keep-accounts-wxapp/.sourcemap/
 
 # Source map 文件（无需提交）
 *.map
@@ -56,25 +56,25 @@ Thumbs.db
 **/.sourcemap/
 
 # HBuilderX
-/frontend/.hbuilderx/
+/keep-accounts-wxapp/.hbuilderx/
 
 # 小程序开发工具
-/frontend/.vscode/
-/frontend/.idea/
+/keep-accounts-wxapp/.vscode/
+/keep-accounts-wxapp/.idea/
 
 # npm / yarn / pnpm
-/frontend/npm-debug.log*
-/frontend/yarn-debug.log*
-/frontend/yarn-error.log*
-/frontend/pnpm-debug.log*
-/frontend/.npm
-/frontend/.yarn-integrity
-/frontend/.pnpm-debug.log*
+/keep-accounts-wxapp/npm-debug.log*
+/keep-accounts-wxapp/yarn-debug.log*
+/keep-accounts-wxapp/yarn-error.log*
+/keep-accounts-wxapp/pnpm-debug.log*
+/keep-accounts-wxapp/.npm
+/keep-accounts-wxapp/.yarn-integrity
+/keep-accounts-wxapp/.pnpm-debug.log*
 
 # 环境与密钥（勿提交）
-/frontend/.env
-/frontend/.env.local
-/frontend/.env.*.local
+/keep-accounts-wxapp/.env
+/keep-accounts-wxapp/.env.local
+/keep-accounts-wxapp/.env.*.local
 
 # =====================
 # 其他

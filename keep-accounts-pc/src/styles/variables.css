@@ -1,0 +1,53 @@
+:root {
+  /* Exact colors from Figma project shared.tsx */
+  --primary: #667EEA;
+  --primary-hover: #5570D6;
+  --primary-light: rgba(102, 126, 234, 0.1);
+  --purple: #764BA2;
+  --bg: #F0F2F8;
+  --sidebar: #252D52;
+  --sidebar-text: rgba(255, 255, 255, 0.5);
+  --green: #11998E;
+  --green-light: rgba(17, 153, 142, 0.1);
+  --red: #F43F5E;
+  --red-light: rgba(244, 63, 94, 0.1);
+  --yellow: #F7971E;
+  --yellow-light: rgba(247, 151, 30, 0.1);
+  --pink: #F953C6;
+  --pink-dark: #B91D73;
+
+  /* Text */
+  --text-primary: #1E293B;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-cell: #334155;
+
+  /* Border */
+  --border: #E2E8F0;
+  --border-light: #F1F5F9;
+  --border-table: #F8FAFC;
+
+  /* Shadows */
+  --card-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  --modal-shadow: 0 16px 48px rgba(102, 126, 234, 0.18), 0 4px 16px rgba(0, 0, 0, 0.08);
+  --btn-shadow: 0 3px 10px rgba(102, 126, 234, 0.35);
+  --btn-danger-shadow: 0 3px 10px rgba(244, 63, 94, 0.3);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+
+  /* Sizing */
+  --sidebar-width: 220px;
+  --topbar-height: 56px;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  --gradient-green: linear-gradient(135deg, #11998E 0%, #38EF7D 100%);
+  --gradient-orange: linear-gradient(135deg, #F7971E 0%, #FFD200 100%);
+  --gradient-pink: linear-gradient(135deg, #F953C6 0%, #B91D73 100%);
+  --gradient-danger: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%);
+  --gradient-sidebar: linear-gradient(180deg, #252D52 0%, #1F2542 100%);
+}

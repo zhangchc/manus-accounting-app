@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="27c16637-2bfd-4150-874d-7512da5a5868" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/../.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../01-首页.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../02-记一笔.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../03-统计分析.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../04-我的.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../05-月度账单.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../06-预算管理.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260325_234513_811.upload" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260325_234513_811.wav" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260325_234930_345.upload" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260325_234930_345.wav" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260325_235240_461.upload" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260325_235240_461.wav" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260326_000045_240.upload" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/backend/debug-audio/u3_20260326_000045_240.wav" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/AccountingApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/common/BusinessException.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/common/GlobalExceptionHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/common/Result.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/config/CorsConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/config/MybatisPlusConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/config/WebConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/controller/AiAccountingController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/controller/BookController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/controller/BudgetController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/controller/CategoryController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/controller/RecordController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/controller/UserController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/dto/AiConfirmRecordDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/dto/AiTextParseDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/dto/BudgetDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/dto/LoginDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/dto/RecordDTO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/entity/Book.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/entity/Budget.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/entity/Category.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/entity/Record.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/entity/User.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/logging/ControllerIoLoggingAspect.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/logging/ControllerIoLoggingProperties.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/logging/TraceIdFilter.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/mapper/BookMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/mapper/BudgetMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/mapper/CategoryMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/mapper/RecordMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/mapper/UserMapper.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/AiAccountingService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/BookService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/BudgetService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/CategoryService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/RecordService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/UserService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/impl/AiAccountingServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/impl/BookServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/impl/BudgetServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/impl/CategoryServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/impl/RecordServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/service/impl/UserServiceImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/utils/JwtUtil.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/AiAccountingItemVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/AiAgentReplyVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/AiDraftVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/AiParseVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/DailyBillVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/MonthBillVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/RecordVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/java/com/accounting/vo/StatisticsVO.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/resources/application-prod.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/resources/application-test.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/resources/application.yml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../backend/src/main/resources/mapper/RecordMapper.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/App.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/api/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/config/env.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/main.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/manifest.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/package.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/add/add.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/bill/bill.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/budget/budget.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/index/index.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/login/login.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/mine/mine.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/pages/statistics/statistics.vue" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/canyin.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/chongwu.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/fushi.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/gongzi.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/gouwu.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/haizi.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/hongbao.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/jiangjin.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/jianzhii.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/jiaotong.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/jujia.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/licai.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/lingshi.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/lvxing.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/meirong.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/qita_in.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/qita_out.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/riyong.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/shejiao.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/shuiguo.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/tongxun.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/tuikuan.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/xuexi.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/yiliao.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/yule.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/yundong.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/zhangbei.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/zhuanzhang.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/category/zhufang.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/add-active.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/add.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/chart-active.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/chart.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/home-active.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/home.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/mine-active.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/static/icons/mine.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/uni.scss" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/utils/icon.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/utils/request.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../frontend/utils/util.js" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
+  <component name="ProjectId" id="3CNx0f5V3uWinohPZdlRpsMkGVh" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.accounting-backend [clean].executor": "Run",
+    "Maven.accounting-backend [install].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Spring Boot.AccountingApplication.executor": "Run",
+    "git-widget-placeholder": "blue",
+    "last_opened_file_path": "/Users/zhangchuancun/manus-accounting-app/ keep-accounts-server",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/main/resources" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="AccountingApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="accounting-backend" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.accounting.AccountingApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.29188.11" />
+        <option value="bundled-js-predefined-d6986cc7102b-09060db00ec0-JavaScript-IU-251.29188.11" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="27c16637-2bfd-4150-874d-7512da5a5868" name="Changes" comment="" />
+      <created>1776239607356</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1776239607356</updated>
+      <workItem from="1776239609117" duration="1770000" />
+      <workItem from="1776241625377" duration="6612000" />
+      <workItem from="1776419041677" duration="919000" />
+      <workItem from="1776474949434" duration="26000" />
+      <workItem from="1776756135744" duration="1834000" />
+      <workItem from="1778133394886" duration="4116000" />
+      <workItem from="1778324585965" duration="803000" />
+      <workItem from="1778461901303" duration="4000" />
+      <workItem from="1778570718418" duration="2237000" />
+      <workItem from="1778655391927" duration="1390000" />
+      <workItem from="1780577662369" duration="623000" />
+      <workItem from="1780657072977" duration="5484000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
