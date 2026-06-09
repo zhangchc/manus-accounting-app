@@ -1,66 +1,56 @@
 <script setup>
-import { ref, reactive, computed, nextTick } from 'vue'
-import { Search, Plus, Edit, Delete, ArrowDown, ArrowRight, RefreshRight } from '@element-plus/icons-vue'
+import { ref, reactive, computed, nextTick, onMounted } from 'vue'
+import { Search, Plus, Edit, Delete, ArrowDown, ArrowRight, RefreshRight, Avatar, WarningFilled } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { getRoleList, createRole, getRoleMenus, assignRoleMenus } from '@/api/role'
+import { getMenuTree } from '@/api/menu'
 
-const roles = ref([
-  { id: 1, name: '超级管理员', code: 'SUPER_ADMIN', desc: '拥有系统所有权限', sort: 1, status: true },
-  { id: 2, name: '运营管理员', code: 'OPS_ADMIN', desc: '负责日常运营管理', sort: 2, status: true },
-  { id: 3, name: '内容编辑', code: 'CONTENT_EDITOR', desc: '分类内容管理权限', sort: 3, status: true },
-  { id: 4, name: '数据分析师', code: 'DATA_ANALYST', desc: '只读数据查看权限', sort: 4, status: false },
-])
+const roles = ref([])
+const menuTree = ref([])
 
-const permTree = [
-  {
-    id: 'system', label: '系统管理', children: [
-      {
-        id: 'admin', label: '管理员管理', children: [
-          { id: 'admin:list', label: '查看列表' }, { id: 'admin:create', label: '新增管理员' },
-          { id: 'admin:edit', label: '编辑管理员' }, { id: 'admin:delete', label: '删除管理员' },
-        ]
-      },
-      {
-        id: 'role', label: '角色管理', children: [
-          { id: 'role:list', label: '查看列表' }, { id: 'role:create', label: '新增角色' },
-          { id: 'role:edit', label: '编辑角色' }, { id: 'role:delete', label: '删除角色' },
-          { id: 'role:assign', label: '分配权限' },
-        ]
-      },
-      {
-        id: 'menu', label: '菜单管理', children: [
-          { id: 'menu:list', label: '查看列表' }, { id: 'menu:create', label: '新增菜单' },
-          { id: 'menu:edit', label: '编辑菜单' }, { id: 'menu:delete', label: '删除菜单' },
-        ]
-      },
-    ]
-  },
-  {
-    id: 'app', label: '应用管理', children: [
-      {
-        id: 'user', label: '小程序用户', children: [
-          { id: 'user:list', label: '查看列表' }, { id: 'user:detail', label: '查看详情' }, { id: 'user:ban', label: '封禁用户' },
-        ]
-      },
-      {
-        id: 'record', label: '记账记录', children: [
-          { id: 'record:list', label: '查看列表' }, { id: 'record:delete', label: '删除记录' }, { id: 'record:export', label: '导出数据' },
-        ]
-      },
-      {
-        id: 'category', label: '分类管理', children: [
-          { id: 'category:list', label: '查看列表' }, { id: 'category:create', label: '新增分类' },
-          { id: 'category:edit', label: '编辑分类' }, { id: 'category:delete', label: '删除分类' },
-        ]
-      },
-    ]
-  },
-  {
-    id: 'log', label: '操作日志', children: [
-      { id: 'log:list', label: '查看日志' }, { id: 'log:export', label: '导出日志' },
-    ]
-  },
-]
+async function loadRoles() {
+  try {
+    const data = await getRoleList()
+    if (data) roles.value = data
+  } catch (e) {
+    ElMessage.error('加载角色列表失败')
+  }
+}
 
-const superAdminPerms = ['system','admin','admin:list','admin:create','admin:edit','admin:delete','role','role:list','role:create','role:edit','role:delete','role:assign','menu','menu:list','menu:create','menu:edit','menu:delete','app','user','user:list','user:detail','user:ban','record','record:list','record:delete','record:export','category','category:list','category:create','category:edit','category:delete','log','log:list','log:export']
+async function loadMenuTree() {
+  try {
+    const data = await getMenuTree()
+    if (data) {
+      menuTree.value = data
+      for (const n of data) {
+        if (n.type === 'dir') expandedNodes.value.add(n.id)
+      }
+    }
+  } catch (e) {
+    ElMessage.error('加载菜单树失败')
+  }
+}
+
+onMounted(() => { loadRoles(); loadMenuTree() })
+
+// Build descendant map for cascade check/uncheck
+const descendantMap = computed(() => {
+  const map = new Map()
+  function collect(node) {
+    const all = new Set()
+    if (node.children && node.children.length) {
+      for (const child of node.children) {
+        all.add(child.id)
+        const childDesc = collect(child)
+        for (const id of childDesc) all.add(id)
+      }
+    }
+    map.set(node.id, all)
+    return all
+  }
+  for (const root of menuTree.value) collect(root)
+  return map
+})
 
 const selectedRole = ref(null)
 const perms = ref(new Set())
@@ -73,9 +63,6 @@ const formStatus = ref(true)
 const deleteId = ref(null)
 const form = reactive({ name: '', code: '', desc: '', sort: 1 })
 
-// Initialize expanded nodes
-permTree.forEach(n => expandedNodes.value.add(n.id))
-
 const filtered = computed(() => {
   let list = roles.value
   if (searchName.value) {
@@ -85,20 +72,38 @@ const filtered = computed(() => {
   return list
 })
 
-function selectRole(r) {
+async function selectRole(r) {
   selectedRole.value = r
-  if (r.id === 1) perms.value = new Set(superAdminPerms)
-  else if (r.id === 2) perms.value = new Set(['app','user','user:list','user:detail','user:ban','record','record:list','record:delete','record:export','category','category:list','log','log:list'])
-  else perms.value = new Set(['app','category','category:list','category:create','category:edit'])
+  try {
+    const menuIds = await getRoleMenus(r.id)
+    perms.value = new Set(menuIds || [])
+  } catch (e) {
+    ElMessage.error('加载角色权限失败')
+    perms.value = new Set()
+  }
 }
 
-function togglePerm(id) {
+function togglePerm(nodeId) {
   const next = new Set(perms.value)
-  if (next.has(id)) next.delete(id); else next.add(id)
+  const desc = descendantMap.value.get(nodeId) || new Set()
+  if (next.has(nodeId)) {
+    next.delete(nodeId)
+    for (const id of desc) next.delete(id)
+  } else {
+    next.add(nodeId)
+    for (const id of desc) next.add(id)
+  }
   perms.value = next
 }
 
 function isChecked(id) { return perms.value.has(id) }
+
+function isIndeterminate(nodeId) {
+  if (isChecked(nodeId)) return false
+  const desc = descendantMap.value.get(nodeId)
+  if (!desc || desc.size === 0) return false
+  return [...desc].some(id => perms.value.has(id))
+}
 
 function toggleExpand(id) {
   const next = new Set(expandedNodes.value)
@@ -106,18 +111,18 @@ function toggleExpand(id) {
   expandedNodes.value = next
 }
 
-// Flatten tree for rendering with visibility
 const flatPermNodes = computed(() => {
   const result = []
   function walk(nodes, depth) {
     for (const n of nodes) {
-      result.push({ node: n, depth, visible: true })
-      if (n.children?.length && expandedNodes.value.has(n.id)) {
+      const hasChildren = n.children && n.children.length > 0
+      result.push({ node: n, depth, visible: true, hasChildren })
+      if (hasChildren && expandedNodes.value.has(n.id)) {
         walk(n.children, depth + 1)
       }
     }
   }
-  walk(permTree, 0)
+  walk(menuTree.value, 0)
   return result
 })
 
@@ -133,18 +138,41 @@ function confirmDelete() {
   deleteId.value = null
 }
 
-function handleSave() {
+async function handleSave() {
   if (editRole.value) {
     const idx = roles.value.findIndex(r => r.id === editRole.value.id)
     if (idx >= 0) Object.assign(roles.value[idx], { ...form, status: formStatus.value })
+    showModal.value = false
   } else {
-    roles.value.push({ id: Date.now(), ...form, status: formStatus.value })
+    try {
+      await createRole({
+        name: form.name,
+        code: form.code,
+        desc: form.desc,
+        sort: form.sort,
+        status: formStatus.value,
+      })
+      ElMessage.success('新增角色成功')
+      showModal.value = false
+      await loadRoles()
+    } catch (e) {
+      ElMessage.error('新增角色失败')
+    }
   }
-  showModal.value = false
 }
 
 function handleSearch() {}
 function handleReset() { searchName.value = '' }
+
+async function savePermissions() {
+  if (!selectedRole.value) return
+  try {
+    await assignRoleMenus(selectedRole.value.id, [...perms.value])
+    ElMessage.success('权限保存成功')
+  } catch (e) {
+    ElMessage.error('权限保存失败')
+  }
+}
 
 const thSt = {
   padding: '12px 20px', fontSize: '12px', color: '#94A3B8', fontWeight: '600',
@@ -265,9 +293,9 @@ const fieldStyle = {
               <input type="checkbox"
                 :checked="isChecked(row.node.id)"
                 @change="togglePerm(row.node.id)"
-                :ref="el => { if (el) { const someChild = row.node.children?.some(c => isChecked(c.id) || c.children?.some(cc => isChecked(cc.id))); el.indeterminate = !isChecked(row.node.id) && !!someChild } }"
+                :ref="el => { if (el) el.indeterminate = isIndeterminate(row.node.id) }"
                 style="accent-color:#667EEA;width:14px;height:14px;cursor:pointer;flex-shrink:0;" />
-              <button v-if="row.node.children?.length"
+              <button v-if="row.hasChildren"
                 @click="toggleExpand(row.node.id)"
                 style="background:none;border:none;cursor:pointer;color:#94A3B8;padding:0;display:flex;flex-shrink:0;">
                 <el-icon size="12">
@@ -275,13 +303,13 @@ const fieldStyle = {
                 </el-icon>
               </button>
               <span v-else style="width:12px;display:inline-block;" />
-              <span :style="{fontSize:'13px',color:row.depth===0?'#1E293B':'#475569',fontWeight:row.depth===0?600:400}">{{ row.node.label }}</span>
-              <span v-if="!row.node.children?.length" style="font-size:11px;padding:1px 8px;border-radius:20px;background:#EEF2FF;color:#667EEA;font-weight:500;">按钮</span>
+              <span :style="{fontSize:'13px',color:row.node.type==='dir'?'#1E293B':'#475569',fontWeight:row.node.type==='dir'?600:400}">{{ row.node.name }}</span>
+              <span v-if="row.node.type === 'btn'" style="font-size:11px;padding:1px 8px;border-radius:20px;background:#EEF2FF;color:#667EEA;font-weight:500;">按钮</span>
             </div>
           </template>
         </div>
         <div v-if="selectedRole" style="padding:14px 20px;border-top:1px solid #F1F5F9;">
-          <button @click="() => {}" style="height:36px;padding:0 20px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(102,126,234,0.35);">保存权限</button>
+          <button @click="savePermissions" style="height:36px;padding:0 20px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(102,126,234,0.35);">保存权限</button>
         </div>
       </div>
     </div>

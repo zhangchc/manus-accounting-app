@@ -15,7 +15,8 @@
       "Bash(lsof -ti:5173,5174,5175)",
       "Bash(xargs kill -9)",
       "Bash(lsof -ti:5173)",
-      "Bash(node -e \"console.log\\('Avatar' in require\\('@element-plus/icons-vue'\\) ? 'exists' : 'missing'\\)\")"
+      "Bash(node -e \"console.log\\('Avatar' in require\\('@element-plus/icons-vue'\\) ? 'exists' : 'missing'\\)\")",
+      "Bash(mvn compile *)"
     ]
   }
 }

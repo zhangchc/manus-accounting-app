@@ -17,6 +17,10 @@ export default defineConfig({
         target: 'http://localhost:9091',
         changeOrigin: true,
       },
+      '/manage': {
+        target: 'http://localhost:9092',
+        changeOrigin: true,
+      },
     },
   },
 })

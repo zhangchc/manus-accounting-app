@@ -1,0 +1,15 @@
+server:
+  port: 9092
+  servlet:
+    context-path: /manage
+
+spring:
+  datasource:
+    druid:
+      url: jdbc:mysql://8.153.192.39:3306/accounting_app?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
+      username: root
+      password: N2v:w6e.JQ_JpiA2
+
+logging:
+  level:
+    com.accounting: info

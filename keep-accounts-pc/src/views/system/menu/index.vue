@@ -1,6 +1,8 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { getMenuTree, createMenu, updateMenu, deleteMenu } from '@/api/menu'
 
 const typeConfig = {
   dir:  { label: '目录', bg: '#EEF2FF', color: '#667EEA' },
@@ -8,43 +10,16 @@ const typeConfig = {
   btn:  { label: '按钮', bg: '#FFF7ED', color: '#F7971E' },
 }
 
-const mockMenus = ref([
-  {
-    id: 1, name: '系统管理', icon: 'Settings', type: 'dir', path: '/system', component: '', permission: '', sort: 1, status: true,
-    children: [
-      {
-        id: 11, name: '管理员管理', icon: 'Users', type: 'menu', path: '/system/admins', component: 'views/system/admins/index', permission: '', sort: 1, status: true,
-        children: [
-          { id: 111, name: '新增管理员', icon: '', type: 'btn', path: '', component: '', permission: 'sys:admin:create', sort: 1, status: true },
-          { id: 112, name: '编辑管理员', icon: '', type: 'btn', path: '', component: '', permission: 'sys:admin:edit', sort: 2, status: true },
-          { id: 113, name: '删除管理员', icon: '', type: 'btn', path: '', component: '', permission: 'sys:admin:delete', sort: 3, status: true },
-        ]
-      },
-      {
-        id: 12, name: '角色管理', icon: 'Shield', type: 'menu', path: '/system/roles', component: 'views/system/roles/index', permission: '', sort: 2, status: true,
-        children: [
-          { id: 121, name: '新增角色', icon: '', type: 'btn', path: '', component: '', permission: 'sys:role:create', sort: 1, status: true },
-          { id: 122, name: '分配权限', icon: '', type: 'btn', path: '', component: '', permission: 'sys:role:assign', sort: 2, status: true },
-        ]
-      },
-      {
-        id: 13, name: '菜单管理', icon: 'Menu', type: 'menu', path: '/system/menus', component: 'views/system/menus/index', permission: '', sort: 3, status: true,
-        children: [
-          { id: 131, name: '新增菜单', icon: '', type: 'btn', path: '', component: '', permission: 'sys:menu:create', sort: 1, status: true },
-        ]
-      },
-    ]
-  },
-  {
-    id: 2, name: '应用管理', icon: 'Smartphone', type: 'dir', path: '/app', component: '', permission: '', sort: 2, status: true,
-    children: [
-      { id: 21, name: '小程序用户', icon: 'Smartphone', type: 'menu', path: '/app/users', component: 'views/app/users/index', permission: '', sort: 1, status: true, children: [] },
-      { id: 22, name: '记账记录', icon: 'BookOpen', type: 'menu', path: '/app/records', component: 'views/app/records/index', permission: '', sort: 2, status: true, children: [] },
-      { id: 23, name: '分类管理', icon: 'Tag', type: 'menu', path: '/app/categories', component: 'views/app/categories/index', permission: '', sort: 3, status: true, children: [] },
-    ]
-  },
-  { id: 3, name: '操作日志', icon: 'FileText', type: 'menu', path: '/logs', component: 'views/logs/index', permission: '', sort: 3, status: true, children: [] },
-])
+const mockMenus = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getMenuTree()
+    if (data && data.length) mockMenus.value = data
+  } catch (e) {
+    ElMessage.error('加载菜单数据失败')
+  }
+})
 
 const expanded = ref(new Set([1, 2, 11, 12]))
 const showModal = ref(false)
@@ -52,7 +27,21 @@ const editItem = ref(null)
 const menuType = ref('menu')
 const formStatus = ref(true)
 const deleteId = ref(null)
+const lockType = ref(false)
+const lockParent = ref(false)
 const form = reactive({ parentId: '', name: '', icon: '', path: '', component: '', permission: '', sort: 1 })
+
+const parentOptions = computed(() => {
+  const result = []
+  function collect(items) {
+    for (const item of items) {
+      if (item.type !== 'btn') result.push({ id: item.id, name: item.name })
+      if (item.children) collect(item.children)
+    }
+  }
+  collect(mockMenus.value)
+  return result
+})
 
 // Flat list of visible rows
 const flatRows = computed(() => {
@@ -84,26 +73,111 @@ function expandAll() {
 
 function collapseAll() { expanded.value = new Set() }
 
-function openAdd() { editItem.value = null; menuType.value = 'dir'; formStatus.value = true; Object.assign(form, { parentId: '', name: '', icon: '', path: '', component: '', permission: '', sort: 1 }); showModal.value = true }
+function openAdd() {
+  editItem.value = null; lockType.value = false; lockParent.value = false
+  menuType.value = 'dir'; formStatus.value = true
+  Object.assign(form, { parentId: '', name: '', icon: '', path: '', component: '', permission: '', sort: 1 })
+  showModal.value = true
+}
 
-function openAddChild(parent) { editItem.value = null; menuType.value = parent.type === 'dir' ? 'menu' : 'btn'; formStatus.value = true; Object.assign(form, { parentId: parent.id, name: '', icon: '', path: '', component: '', permission: '', sort: 1 }); showModal.value = true }
+function openAddChild(parent) {
+  editItem.value = null; lockType.value = true; lockParent.value = true
+  menuType.value = parent.type === 'dir' ? 'menu' : 'btn'
+  formStatus.value = true
+  Object.assign(form, { parentId: parent.id, name: '', icon: '', path: '', component: '', permission: '', sort: 1 })
+  showModal.value = true
+}
 
-function openEdit(item) { editItem.value = item; menuType.value = item.type; formStatus.value = item.status; Object.assign(form, { parentId: item.parentId || '', name: item.name, icon: item.icon, path: item.path, component: item.component, permission: item.permission, sort: item.sort }); showModal.value = true }
+function openEdit(item) {
+  editItem.value = item; lockType.value = true; lockParent.value = true
+  menuType.value = item.type; formStatus.value = item.status
+  Object.assign(form, { parentId: item.parentId || '', name: item.name, icon: item.icon, path: item.path, component: item.component, permission: item.permission, sort: item.sort })
+  showModal.value = true
+}
 
 function handleDelete(id) { deleteId.value = id }
 
-function confirmDelete() {
-  if (deleteId.value !== null) mockMenus.value = deleteById(mockMenus.value, deleteId.value)
-  deleteId.value = null
+async function refreshTree(extraExpandId) {
+  const saved = new Set(expanded.value)
+  if (extraExpandId) saved.add(extraExpandId)
+  const data = await getMenuTree()
+  if (data && data.length) {
+    mockMenus.value = data
+    const newIds = new Set()
+    const collect = (children) => children.forEach(i => { newIds.add(i.id); if (i.children) collect(i.children) })
+    collect(data)
+    const restored = new Set()
+    for (const id of saved) { if (newIds.has(id)) restored.add(id) }
+    expanded.value = restored
+  }
 }
 
-function deleteById(items, id) {
-  return items.filter(i => i.id !== id).map(i => i.children ? { ...i, children: deleteById(i.children, id) } : i)
+async function handleStatusChange(item, newStatus) {
+  const oldStatus = item.status
+  item.status = newStatus
+  try {
+    await updateMenu({
+      id: item.id,
+      parentId: item.parentId || 0,
+      name: item.name,
+      icon: item.icon,
+      type: item.type,
+      path: item.path,
+      component: item.component,
+      permission: item.permission,
+      sort: item.sort,
+      status: newStatus,
+    })
+  } catch (e) {
+    item.status = oldStatus
+    ElMessage.error('状态更新失败')
+  }
 }
 
-function handleSave() {
-  showModal.value = false
-  // In a real app, this would persist to backend
+async function confirmDelete() {
+  if (deleteId.value === null) return
+  try {
+    await deleteMenu(deleteId.value)
+    deleteId.value = null
+    await refreshTree()
+  } catch (e) {
+    ElMessage.error(e?.data?.message || '删除失败')
+  }
+}
+
+async function handleSave() {
+  try {
+    if (editItem.value) {
+      await updateMenu({
+        id: editItem.value.id,
+        parentId: form.parentId || 0,
+        name: form.name,
+        icon: form.icon,
+        type: menuType.value,
+        path: form.path,
+        component: form.component,
+        permission: form.permission,
+        sort: form.sort,
+        status: formStatus.value,
+      })
+    } else {
+      await createMenu({
+        parentId: form.parentId || 0,
+        name: form.name,
+        icon: form.icon,
+        type: menuType.value,
+        path: form.path,
+        component: form.component,
+        permission: form.permission,
+        sort: form.sort,
+        status: formStatus.value,
+      })
+    }
+    showModal.value = false
+    await refreshTree(form.parentId || 0)
+  } catch (e) {
+    ElMessage.error(e?.data?.message || '保存失败')
+  }
 }
 
 const thSt = {
@@ -193,7 +267,7 @@ const fieldStyle = {
               <td :style="{...tdSt, color:'#94A3B8'}">{{ item.sort }}</td>
               <!-- Status -->
               <td :style="tdSt">
-                <el-switch :model-value="item.status" size="small" @change="item.status = !item.status" />
+                <el-switch :model-value="item.status" size="small" @change="val => handleStatusChange(item, val)" />
               </td>
               <!-- Actions -->
               <td :style="tdSt">
@@ -218,10 +292,10 @@ const fieldStyle = {
       <!-- Parent menu -->
       <div style="margin-bottom:14px;">
         <div style="font-size:13px;color:#475569;margin-bottom:6px;font-weight:500;">上级菜单</div>
-        <select :style="{...fieldStyle, cursor:'pointer'}">
+        <select v-model="form.parentId" :disabled="lockParent"
+          :style="{...fieldStyle, cursor: lockParent ? 'not-allowed' : 'pointer', opacity: lockParent ? 0.6 : 1}">
           <option value="">顶级菜单（无上级）</option>
-          <option value="1">系统管理</option>
-          <option value="2">应用管理</option>
+          <option v-for="p in parentOptions" :key="p.id" :value="p.id">{{ p.name }}</option>
         </select>
       </div>
       <!-- Name + Type row -->
@@ -232,9 +306,12 @@ const fieldStyle = {
         </div>
         <div style="flex:1;margin-bottom:14px;">
           <div style="font-size:13px;color:#475569;margin-bottom:6px;font-weight:500;">菜单类型 <span style="color:#F43F5E;">*</span></div>
-          <div style="display:flex;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;height:36px;">
-            <button v-for="t in ['dir','menu','btn']" :key="t" @click="menuType = t"
-              :style="{flex:1,border:'none',background:menuType===t?'linear-gradient(135deg,#667EEA,#764BA2)':'#F8FAFC',color:menuType===t?'#fff':'#64748B',cursor:'pointer',fontSize:'13px',transition:'all 0.15s',fontWeight:menuType===t?600:400}">
+          <div style="display:flex;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;height:36px;"
+            :style="{opacity: lockType ? 0.5 : 1}">
+            <button v-for="t in ['dir','menu','btn']" :key="t"
+              :disabled="lockType"
+              @click="menuType = t"
+              :style="{flex:1,border:'none',background:menuType===t?'linear-gradient(135deg,#667EEA,#764BA2)':'#F8FAFC',color:menuType===t?'#fff':'#64748B',cursor:lockType?'not-allowed':'pointer',fontSize:'13px',transition:'all 0.15s',fontWeight:menuType===t?600:400}">
               {{ typeConfig[t].label }}
             </button>
           </div>
