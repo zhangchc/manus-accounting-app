@@ -132,6 +132,10 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BusinessException("用户不存在");
         }
+        Long currentUserId = (Long) request.getAttribute("userId");
+        if (id.equals(currentUserId)) {
+            throw new BusinessException("不能删除自己");
+        }
         userMapper.deleteById(id);
     }
 
@@ -150,12 +154,13 @@ public class UserServiceImpl implements UserService {
                 new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId)
         );
         if (roleIds != null && !roleIds.isEmpty()) {
-            for (Long roleId : roleIds) {
+            List<SysUserRole> list = roleIds.stream().map(roleId -> {
                 SysUserRole ur = new SysUserRole();
                 ur.setUserId(userId);
                 ur.setRoleId(roleId);
-                userRoleMapper.insert(ur);
-            }
+                return ur;
+            }).collect(Collectors.toList());
+            userRoleMapper.insertBatch(list);
         }
     }
 }

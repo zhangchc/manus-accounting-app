@@ -104,6 +104,7 @@ public class AuthController {
             node.setIcon(menu.getIcon());
             node.setType(menu.getType());
             node.setPath(menu.getPath());
+            node.setComponent(menu.getComponent());
             node.setSort(menu.getSort());
             node.setChildren(new ArrayList<>());
             if (menu.getChildren() != null) {

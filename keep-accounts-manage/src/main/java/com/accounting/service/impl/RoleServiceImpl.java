@@ -114,12 +114,13 @@ public class RoleServiceImpl implements RoleService {
                 new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId)
         );
         if (menuIds != null && !menuIds.isEmpty()) {
-            for (Long menuId : menuIds) {
+            List<SysRoleMenu> list = menuIds.stream().map(menuId -> {
                 SysRoleMenu rm = new SysRoleMenu();
                 rm.setRoleId(roleId);
                 rm.setMenuId(menuId);
-                roleMenuMapper.insert(rm);
-            }
+                return rm;
+            }).collect(Collectors.toList());
+            roleMenuMapper.insertBatch(list);
         }
     }
 }

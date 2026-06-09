@@ -112,6 +112,7 @@ public class MenuServiceImpl implements MenuService {
     }
 
     @Override
+    @Transactional
     public void delete(Long id) {
         SysMenu menu = menuMapper.selectById(id);
         if (menu == null) {
@@ -123,6 +124,9 @@ public class MenuServiceImpl implements MenuService {
         if (count > 0) {
             throw new BusinessException("该菜单下存在子节点，请先删除子节点");
         }
+        roleMenuMapper.delete(
+                new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getMenuId, id)
+        );
         menuMapper.deleteById(id);
     }
 
