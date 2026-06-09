@@ -108,7 +108,6 @@ function handleSave() {
 function handleSearch() { page.value = 1 }
 function handleReset() { searchUser.value = ''; searchStatus.value = ''; page.value = 1 }
 
-// Exact style constants from shared.tsx
 const thStyle = {
   padding: '12px 20px', fontSize: '12px', color: '#94A3B8',
   fontWeight: '600', textAlign: 'left', whiteSpace: 'nowrap',
@@ -214,7 +213,7 @@ const fieldStyle = {
           </tbody>
         </table>
       </div>
-      <!-- Pagination matching shared.tsx Pagination component -->
+      <!-- Pagination -->
       <div style="display:flex;justify-content:flex-end;padding:12px 16px;align-items:center;gap:6px;">
         <span style="font-size:13px;color:#94A3B8;margin-right:8px;">共 {{ filtered.length }} 条</span>
         <button :disabled="page <= 1" @click="page--" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;border-radius:8px;background:#fff;color:#64748B;cursor:pointer;font-size:14px;"

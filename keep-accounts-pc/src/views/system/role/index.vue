@@ -146,7 +146,6 @@ function handleSave() {
 function handleSearch() {}
 function handleReset() { searchName.value = '' }
 
-// Exact style constants from shared.tsx
 const thSt = {
   padding: '12px 20px', fontSize: '12px', color: '#94A3B8', fontWeight: '600',
   textAlign: 'left', whiteSpace: 'nowrap', background: '#F8FAFC',
