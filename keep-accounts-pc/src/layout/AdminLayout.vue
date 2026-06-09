@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -7,34 +7,69 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const expanded = ref(['system', 'app'])
+const expanded = ref([])
 const userMenuOpen = ref(false)
 
-const navGroups = [
-  { key: 'dashboard', label: '仪表盘', route: '/dashboard' },
-  {
-    key: 'system', label: '系统管理', children: [
-      { key: 'system-user', label: '管理员管理', route: '/system/user' },
-      { key: 'system-role', label: '角色管理', route: '/system/role' },
-      { key: 'system-menu', label: '菜单管理', route: '/system/menu' },
-    ]
-  },
-  {
-    key: 'app', label: '应用管理', children: [
-      { key: 'app-user', label: '小程序用户', route: '/app/user' },
-      { key: 'app-record', label: '记账记录', route: '/app/record' },
-      { key: 'app-category', label: '分类管理', route: '/app/category' },
-    ]
-  },
-  { key: 'app-log', label: '操作日志', route: '/app/log' },
-]
+const flatPages = computed(() => {
+  const map = {}
+  if (auth.menus && auth.menus.length) {
+    function walk(items) {
+      for (const m of items) {
+        if (m.type === 'menu' && m.path) {
+          map[m.path] = m.name
+        }
+        if (m.children) walk(m.children)
+      }
+    }
+    walk(auth.menus)
+  }
+  return map
+})
 
-const pageNames = {
-  '/dashboard': '仪表盘',
-  '/system/user': '管理员管理', '/system/role': '角色管理', '/system/menu': '菜单管理',
-  '/app/user': '小程序用户管理', '/app/record': '记账记录管理', '/app/category': '分类管理',
-  '/app/log': '操作日志',
-}
+const navGroups = computed(() => {
+  const result = [
+    { key: 'dashboard', label: '仪表盘', route: '/dashboard', icon: 'DataAnalysis' }
+  ]
+  if (auth.menus && auth.menus.length) {
+    for (const m of auth.menus) {
+      if (m.type === 'dir') {
+        result.push({
+          key: String(m.id),
+          label: m.name,
+          icon: m.icon,
+          children: (m.children || []).map(c => ({
+            key: String(c.id),
+            label: c.name,
+            icon: c.icon,
+            route: c.path,
+          }))
+        })
+      } else if (m.type === 'menu') {
+        result.push({
+          key: String(m.id),
+          label: m.name,
+          route: m.path,
+          icon: m.icon,
+        })
+      }
+    }
+  }
+  return result
+})
+
+const pageNames = computed(() => {
+  const map = { '/dashboard': '仪表盘' }
+  if (auth.menus && auth.menus.length) {
+    function walk(items) {
+      for (const m of items) {
+        if (m.path) map[m.path] = m.name
+        if (m.children) walk(m.children)
+      }
+    }
+    walk(auth.menus)
+  }
+  return map
+})
 
 function isActive(routePath) { return route.path === routePath }
 function isGroupActive(group) { return group.children?.some(c => isActive(c.route)) }
@@ -48,14 +83,25 @@ function toggle(key) {
 function navTo(path) { router.push(path) }
 
 const breadcrumbs = computed(() => {
-  const label = pageNames[route.path] || ''
+  const label = pageNames.value[route.path] || ''
   return { label }
+})
+
+const userInitial = computed(() => {
+  const name = auth.userInfo?.nickname || auth.userInfo?.username || 'A'
+  return name[0]
 })
 
 function handleLogout() {
   auth.logout()
   router.push('/login')
 }
+
+watch(() => auth.menus, (menus) => {
+  if (menus && menus.length) {
+    expanded.value = navGroups.value.filter(g => g.children).map(g => g.key)
+  }
+}, { immediate: true })
 </script>
 
 <template>
@@ -91,8 +137,7 @@ function handleLogout() {
               @mouseleave="e => { if (!isActive(item.route)) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.48)' } }"
             >
               <span v-if="isActive(item.route)" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;border-radius:0 2px 2px 0;background:linear-gradient(180deg,#A5B4FC,#C084FC);"></span>
-              <el-icon v-if="item.key === 'dashboard'" style="font-size:14px;flex-shrink:0;"><DataAnalysis /></el-icon>
-              <el-icon v-else-if="item.key === 'app-log'" style="font-size:14px;flex-shrink:0;"><Document /></el-icon>
+              <el-icon v-if="item.icon" style="font-size:14px;flex-shrink:0;"><component :is="item.icon" /></el-icon>
               <span style="line-height:1;font-weight:400;" :style="{fontWeight: isActive(item.route) ? 600 : 400}">{{ item.label }}</span>
             </button>
           </div>
@@ -110,8 +155,7 @@ function handleLogout() {
               @mouseleave="e => { e.currentTarget.style.color = isGroupActive(item) ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.3)' }"
             >
               <span style="display:flex;align-items:center;gap:6px;">
-                <el-icon v-if="item.key === 'system'" style="font-size:12px;"><Setting /></el-icon>
-                <el-icon v-else-if="item.key === 'app'" style="font-size:12px;"><Iphone /></el-icon>
+                <el-icon v-if="item.icon" style="font-size:12px;"><component :is="item.icon" /></el-icon>
                 {{ item.label }}
               </span>
               <el-icon :style="{transform: expanded.includes(item.key) ? 'rotate(0deg)' : 'rotate(-90deg)',transition:'transform 0.22s',flexShrink:0,opacity:0.5,fontSize:'11px'}"><ArrowDown /></el-icon>
@@ -131,12 +175,7 @@ function handleLogout() {
                   @mouseleave="e => { if (!isActive(child.route)) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.48)' } }"
                 >
                   <span v-if="isActive(child.route)" style="position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;border-radius:0 2px 2px 0;background:linear-gradient(180deg,#A5B4FC,#C084FC);"></span>
-                  <el-icon v-if="child.key === 'system-user'" style="font-size:14px;flex-shrink:0;"><User /></el-icon>
-                  <el-icon v-else-if="child.key === 'system-role'" style="font-size:14px;flex-shrink:0;"><Avatar /></el-icon>
-                  <el-icon v-else-if="child.key === 'system-menu'" style="font-size:14px;flex-shrink:0;"><Menu /></el-icon>
-                  <el-icon v-else-if="child.key === 'app-user'" style="font-size:14px;flex-shrink:0;"><Iphone /></el-icon>
-                  <el-icon v-else-if="child.key === 'app-record'" style="font-size:14px;flex-shrink:0;"><Notebook /></el-icon>
-                  <el-icon v-else-if="child.key === 'app-category'" style="font-size:14px;flex-shrink:0;"><CollectionTag /></el-icon>
+                  <el-icon v-if="child.icon" style="font-size:14px;flex-shrink:0;"><component :is="child.icon" /></el-icon>
                   <span style="font-size:13px;line-height:1;" :style="{fontWeight: isActive(child.route) ? 600 : 400}">{{ child.label }}</span>
                 </button>
               </div>
@@ -148,10 +187,10 @@ function handleLogout() {
       <!-- Bottom user card -->
       <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;">
         <div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);">
-          <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;flex-shrink:0;">A</div>
+          <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700;flex-shrink:0;">{{ userInitial }}</div>
           <div style="flex:1;min-width:0;">
-            <div style="color:#fff;font-size:12px;font-weight:600;line-height:1.3;">admin</div>
-            <div style="color:rgba(255,255,255,0.35);font-size:11px;margin-top:1px;">超级管理员</div>
+            <div style="color:#fff;font-size:12px;font-weight:600;line-height:1.3;">{{ auth.userInfo?.username || '-' }}</div>
+            <div style="color:rgba(255,255,255,0.35);font-size:11px;margin-top:1px;">{{ auth.userInfo?.nickname || '' }}</div>
           </div>
           <button @click="handleLogout" title="退出登录"
             style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.25);padding:4px;display:flex;border-radius:6px;transition:color 0.15s;"
@@ -187,17 +226,17 @@ function handleLogout() {
               @mouseenter="e => e.currentTarget.style.background = '#F0F2F8'"
               @mouseleave="e => e.currentTarget.style.background = 'transparent'"
             >
-              <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;">A</div>
-              <span style="font-size:13px;color:#1E293B;font-weight:600;">admin</span>
+              <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700;flex-shrink:0;">{{ userInitial }}</div>
+              <span style="font-size:13px;color:#1E293B;font-weight:600;">{{ auth.userInfo?.username || '-' }}</span>
               <el-icon :style="{fontSize:'12px',color:'#94A3B8',transition:'transform 0.2s',transform: userMenuOpen ? 'rotate(180deg)' : 'rotate(0)'}"><ArrowDown /></el-icon>
             </button>
             <div v-if="userMenuOpen" style="position:absolute;right:0;top:48px;background:#fff;border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.12);border:1px solid #F1F5F9;min-width:160px;z-index:200;overflow:hidden;">
               <div style="padding:14px 16px;border-bottom:1px solid #F8FAFC;background:linear-gradient(135deg,rgba(102,126,234,0.05),rgba(118,75,162,0.05));">
                 <div style="display:flex;align-items:center;gap:10px;">
-                  <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;">A</div>
+                  <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;">{{ userInitial }}</div>
                   <div>
-                    <div style="font-size:13px;font-weight:600;color:#1E293B;">admin</div>
-                    <div style="font-size:11px;color:#94A3B8;margin-top:1px;">超级管理员</div>
+                    <div style="font-size:13px;font-weight:600;color:#1E293B;">{{ auth.userInfo?.username || '-' }}</div>
+                    <div style="font-size:11px;color:#94A3B8;margin-top:1px;">{{ auth.userInfo?.nickname || '' }}</div>
                   </div>
                 </div>
               </div>

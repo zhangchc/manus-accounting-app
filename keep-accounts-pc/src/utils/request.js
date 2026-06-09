@@ -14,8 +14,26 @@ request.interceptors.request.use(config => {
 })
 
 request.interceptors.response.use(
-  res => res.data,
-  err => Promise.reject(err)
+  res => {
+    const body = res.data
+    if (body && body.code && body.code !== 200) {
+      if (body.code === 401) {
+        localStorage.removeItem('admin_token')
+        localStorage.removeItem('admin_user')
+        window.location.href = '/'
+      }
+      return Promise.reject({ response: { data: body } })
+    }
+    return body
+  },
+  err => {
+    if (err.response && err.response.status === 401) {
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_user')
+      window.location.href = '/'
+    }
+    return Promise.reject(err)
+  }
 )
 
 export default request

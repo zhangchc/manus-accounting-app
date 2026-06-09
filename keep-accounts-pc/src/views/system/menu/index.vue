@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { Plus, Edit, Delete } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Operation } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getMenuTree, createMenu, updateMenu, deleteMenu } from '@/api/menu'
 
@@ -10,12 +10,12 @@ const typeConfig = {
   btn:  { label: '按钮', bg: '#FFF7ED', color: '#F7971E' },
 }
 
-const mockMenus = ref([])
+const menuTree = ref([])
 
 onMounted(async () => {
   try {
     const data = await getMenuTree()
-    if (data && data.length) mockMenus.value = data
+    if (data && data.length) menuTree.value = data
   } catch (e) {
     ElMessage.error('加载菜单数据失败')
   }
@@ -39,7 +39,7 @@ const parentOptions = computed(() => {
       if (item.children) collect(item.children)
     }
   }
-  collect(mockMenus.value)
+  collect(menuTree.value)
   return result
 })
 
@@ -54,7 +54,7 @@ const flatRows = computed(() => {
       }
     }
   }
-  walk(mockMenus.value, 0)
+  walk(menuTree.value, 0)
   return result
 })
 
@@ -67,7 +67,7 @@ function toggle(id) {
 function expandAll() {
   const ids = new Set()
   const collect = (items) => items.forEach(i => { ids.add(i.id); if (i.children) collect(i.children) })
-  collect(mockMenus.value)
+  collect(menuTree.value)
   expanded.value = ids
 }
 
@@ -102,7 +102,7 @@ async function refreshTree(extraExpandId) {
   if (extraExpandId) saved.add(extraExpandId)
   const data = await getMenuTree()
   if (data && data.length) {
-    mockMenus.value = data
+    menuTree.value = data
     const newIds = new Set()
     const collect = (children) => children.forEach(i => { newIds.add(i.id); if (i.children) collect(i.children) })
     collect(data)
@@ -141,7 +141,7 @@ async function confirmDelete() {
     deleteId.value = null
     await refreshTree()
   } catch (e) {
-    ElMessage.error(e?.data?.message || '删除失败')
+    ElMessage.error(e?.response?.data?.message || '删除失败')
   }
 }
 
@@ -176,7 +176,7 @@ async function handleSave() {
     showModal.value = false
     await refreshTree(form.parentId || 0)
   } catch (e) {
-    ElMessage.error(e?.data?.message || '保存失败')
+    ElMessage.error(e?.response?.data?.message || '保存失败')
   }
 }
 
@@ -204,7 +204,7 @@ const fieldStyle = {
         <button @click="expandAll" style="height:32px;padding:0 14px;background:#EEF2FF;color:#667EEA;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;">展开全部</button>
         <button @click="collapseAll" style="height:32px;padding:0 14px;background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;cursor:pointer;font-size:13px;">折叠全部</button>
       </div>
-      <button @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);">
+      <button v-permission="'sys:menu:create'" @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);">
         <el-icon style="font-size:15px;"><Plus /></el-icon>新增菜单
       </button>
     </div>
@@ -272,11 +272,11 @@ const fieldStyle = {
               <!-- Actions -->
               <td :style="tdSt">
                 <div style="display:flex;gap:6px;">
-                  <button v-if="item.type !== 'btn'" @click="openAddChild(item)" style="height:28px;padding:0 10px;background:#F0FDF4;color:#11998E;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;">+子级</button>
-                  <button @click="openEdit(item)" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                  <button v-if="item.type !== 'btn'" v-permission="'sys:menu:create'" @click="openAddChild(item)" style="height:28px;padding:0 10px;background:#F0FDF4;color:#11998E;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;">+子级</button>
+                  <button v-permission="'sys:menu:edit'" @click="openEdit(item)" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
                     <el-icon style="font-size:11px;"><Edit /></el-icon>编辑
                   </button>
-                  <button @click="handleDelete(item.id)" style="height:28px;padding:0 10px;background:#FFF1F2;color:#F43F5E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                  <button v-permission="'sys:menu:delete'" @click="handleDelete(item.id)" style="height:28px;padding:0 10px;background:#FFF1F2;color:#F43F5E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
                     <el-icon style="font-size:11px;"><Delete /></el-icon>删除
                   </button>
                 </div>

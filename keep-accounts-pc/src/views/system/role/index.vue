@@ -2,7 +2,7 @@
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { Search, Plus, Edit, Delete, ArrowDown, ArrowRight, RefreshRight, Avatar, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getRoleList, createRole, updateRole, getRoleMenus, assignRoleMenus } from '@/api/role'
+import { getRoleList, createRole, updateRole, deleteRole, getRoleMenus, assignRoleMenus } from '@/api/role'
 import { getMenuTree } from '@/api/menu'
 
 const roles = ref([])
@@ -13,7 +13,7 @@ async function loadRoles() {
     const data = await getRoleList()
     if (data) roles.value = data
   } catch (e) {
-    ElMessage.error('加载角色列表失败')
+    ElMessage.error(e?.response?.data?.message || '加载角色列表失败')
   }
 }
 
@@ -27,7 +27,7 @@ async function loadMenuTree() {
       }
     }
   } catch (e) {
-    ElMessage.error('加载菜单树失败')
+    ElMessage.error(e?.response?.data?.message || '加载菜单树失败')
   }
 }
 
@@ -78,7 +78,7 @@ async function selectRole(r) {
     const menuIds = await getRoleMenus(r.id)
     perms.value = new Set(menuIds || [])
   } catch (e) {
-    ElMessage.error('加载角色权限失败')
+    ElMessage.error(e?.response?.data?.message || '加载角色权限失败')
     perms.value = new Set()
   }
 }
@@ -130,12 +130,31 @@ function openAdd() { editRole.value = null; formStatus.value = true; Object.assi
 function openEdit(r) { editRole.value = r; formStatus.value = r.status; Object.assign(form, { name: r.name, code: r.code, desc: r.desc, sort: r.sort }); showModal.value = true }
 function handleDelete(id) { deleteId.value = id }
 
-function confirmDelete() {
-  if (deleteId.value !== null) {
-    roles.value = roles.value.filter(r => r.id !== deleteId.value)
-    if (selectedRole.value?.id === deleteId.value) selectedRole.value = null
+async function toggleStatus(r) {
+  try {
+    await updateRole({
+      id: r.id, name: r.name, code: r.code, desc: r.desc, sort: r.sort,
+      status: !r.status,
+    })
+    r.status = !r.status
+    ElMessage.success(r.status ? '已启用' : '已禁用')
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '操作失败')
   }
-  deleteId.value = null
+}
+
+async function confirmDelete() {
+  if (deleteId.value !== null) {
+    try {
+      await deleteRole(deleteId.value)
+      ElMessage.success('删除成功')
+      if (selectedRole.value?.id === deleteId.value) selectedRole.value = null
+      deleteId.value = null
+      await loadRoles()
+    } catch (e) {
+      ElMessage.error(e?.response?.data?.message || '删除失败')
+    }
+  }
 }
 
 async function handleSave() {
@@ -157,7 +176,7 @@ async function handleSave() {
       }
       await loadRoles()
     } catch (e) {
-      ElMessage.error('编辑角色失败')
+      ElMessage.error(e?.response?.data?.message || '编辑角色失败')
     }
   } else {
     try {
@@ -172,12 +191,11 @@ async function handleSave() {
       showModal.value = false
       await loadRoles()
     } catch (e) {
-      ElMessage.error('新增角色失败')
+      ElMessage.error(e?.response?.data?.message || '新增角色失败')
     }
   }
 }
 
-function handleSearch() {}
 function handleReset() { searchName.value = '' }
 
 async function savePermissions() {
@@ -186,7 +204,7 @@ async function savePermissions() {
     await assignRoleMenus(selectedRole.value.id, [...perms.value])
     ElMessage.success('权限保存成功')
   } catch (e) {
-    ElMessage.error('权限保存失败')
+    ElMessage.error(e?.response?.data?.message || '权限保存失败')
   }
 }
 
@@ -217,14 +235,14 @@ const fieldStyle = {
             <input v-model="searchName" placeholder="角色名称/编码"
               :style="{...fieldStyle, width:'220px', paddingLeft:'32px'}" />
           </div>
-          <button @click="handleSearch" style="height:36px;padding:0 16px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);">
+          <button style="height:36px;padding:0 16px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);">
             <el-icon style="font-size:13px;"><Search /></el-icon>搜索
           </button>
           <button @click="handleReset" style="height:36px;padding:0 16px;background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:5px;">
             <el-icon style="font-size:13px;"><RefreshRight /></el-icon>重置
           </button>
         </div>
-        <button @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);flex-shrink:0;">
+        <button v-permission="'sys:role:create'" @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);flex-shrink:0;">
           <el-icon style="font-size:15px;"><Plus /></el-icon>新增角色
         </button>
       </div>
@@ -268,14 +286,14 @@ const fieldStyle = {
                   <td :style="{...tdSt, color:'#475569', maxWidth:'160px', overflow:'hidden', textOverflow:'ellipsis'}">{{ r.desc }}</td>
                   <td :style="{...tdSt, color:'#94A3B8'}">{{ r.sort }}</td>
                   <td :style="tdSt">
-                    <el-switch :model-value="r.status" size="small" @change="roles = roles.map(x => x.id === r.id ? {...x, status: !x.status} : x)" />
+                    <el-switch :model-value="r.status" size="small" @change="toggleStatus(r)" />
                   </td>
                   <td :style="tdSt" @click.stop>
                     <div style="display:flex;gap:6px;">
-                      <button @click="openEdit(r)" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                      <button v-permission="'sys:role:edit'" @click="openEdit(r)" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
                         <el-icon style="font-size:11px;"><Edit /></el-icon>编辑
                       </button>
-                      <button @click="handleDelete(r.id)" style="height:28px;padding:0 10px;background:#FFF1F2;color:#F43F5E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                      <button v-permission="'sys:role:delete'" @click="handleDelete(r.id)" style="height:28px;padding:0 10px;background:#FFF1F2;color:#F43F5E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
                         <el-icon style="font-size:11px;"><Delete /></el-icon>删除
                       </button>
                     </div>
@@ -325,7 +343,7 @@ const fieldStyle = {
           </template>
         </div>
         <div v-if="selectedRole" style="padding:14px 20px;border-top:1px solid #F1F5F9;">
-          <button @click="savePermissions" style="height:36px;padding:0 20px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(102,126,234,0.35);">保存权限</button>
+          <button v-permission="'sys:role:assign'" @click="savePermissions" style="height:36px;padding:0 20px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(102,126,234,0.35);">保存权限</button>
         </div>
       </div>
     </div>

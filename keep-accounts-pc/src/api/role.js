@@ -16,6 +16,10 @@ export function getRoleMenus(roleId) {
   return request.get(`/manage/role/${roleId}/menus`).then(r => r.data)
 }
 
+export function deleteRole(id) {
+  return request.delete(`/manage/role/${id}`)
+}
+
 export function assignRoleMenus(roleId, menuIds) {
   return request.put(`/manage/role/${roleId}/menus`, menuIds)
 }

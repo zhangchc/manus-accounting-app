@@ -1,5 +1,12 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import AdminLayout from '@/layout/AdminLayout.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const viewModules = import.meta.glob('../views/**/*.vue')
+
+function resolveComponent(componentPath) {
+  return viewModules[`../${componentPath}.vue`]
+}
 
 const routes = [
   {
@@ -10,6 +17,7 @@ const routes = [
   },
   {
     path: '/',
+    name: 'layout',
     component: AdminLayout,
     redirect: '/dashboard',
     children: [
@@ -18,48 +26,6 @@ const routes = [
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
         meta: { title: '仪表盘', icon: 'Odometer' },
-      },
-      {
-        path: 'system/user',
-        name: 'SystemUser',
-        component: () => import('@/views/system/user/index.vue'),
-        meta: { title: '管理员管理', icon: 'User' },
-      },
-      {
-        path: 'system/role',
-        name: 'SystemRole',
-        component: () => import('@/views/system/role/index.vue'),
-        meta: { title: '角色管理', icon: 'UserFilled' },
-      },
-      {
-        path: 'system/menu',
-        name: 'SystemMenu',
-        component: () => import('@/views/system/menu/index.vue'),
-        meta: { title: '菜单管理', icon: 'Menu' },
-      },
-      {
-        path: 'app/user',
-        name: 'AppUser',
-        component: () => import('@/views/app/user/index.vue'),
-        meta: { title: '小程序用户', icon: 'Avatar' },
-      },
-      {
-        path: 'app/record',
-        name: 'AppRecord',
-        component: () => import('@/views/app/record/index.vue'),
-        meta: { title: '记账记录', icon: 'Collection' },
-      },
-      {
-        path: 'app/category',
-        name: 'AppCategory',
-        component: () => import('@/views/app/category/index.vue'),
-        meta: { title: '分类管理', icon: 'Grid' },
-      },
-      {
-        path: 'app/log',
-        name: 'AppLog',
-        component: () => import('@/views/app/log/index.vue'),
-        meta: { title: '操作日志', icon: 'Document' },
       },
     ],
   },
@@ -70,12 +36,34 @@ const router = createRouter({
   routes,
 })
 
+export function addMenuRoutes(menus) {
+  if (!menus || !menus.length) return
+
+  function walk(items) {
+    for (const item of items) {
+      if (item.type === 'menu' && item.path && item.component) {
+        const component = resolveComponent(item.component)
+        if (component) {
+          router.addRoute('layout', {
+            path: item.path,
+            name: item.name,
+            component,
+            meta: { title: item.name, icon: item.icon },
+          })
+        }
+      }
+      if (item.children) walk(item.children)
+    }
+  }
+  walk(menus)
+}
+
 // Auth guard
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('admin_token')
-  if (to.path !== '/login' && !token) {
+  const auth = useAuthStore()
+  if (to.path !== '/login' && !auth.isLoggedIn()) {
     next('/login')
-  } else if (to.path === '/login' && token) {
+  } else if (to.path === '/login' && auth.isLoggedIn()) {
     next('/dashboard')
   } else {
     next()

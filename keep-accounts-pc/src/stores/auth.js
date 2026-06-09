@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { login as loginApi, getUserInfo } from '@/api/auth'
+import { addMenuRoutes } from '@/router'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('admin_token') || '')
@@ -9,28 +11,39 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = () => !!token.value
 
-  function login(username, password) {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const t = 'mock-admin-jwt-token'
-        const user = {
-          id: 1,
-          username,
-          nickname: '超级管理员',
-          avatar: '',
-          roles: ['ROLE_SUPER_ADMIN'],
-        }
-        token.value = t
-        userInfo.value = user
-        permissions.value = ['sys:user:list', 'sys:user:create', 'sys:user:update', 'sys:user:delete',
-          'sys:role:list', 'sys:role:create', 'sys:role:update', 'sys:role:delete',
-          'sys:menu:list', 'sys:menu:create', 'sys:menu:update', 'sys:menu:delete',
-          'app:user:list', 'app:record:list', 'app:category:list', 'app:log:list']
-        localStorage.setItem('admin_token', t)
-        localStorage.setItem('admin_user', JSON.stringify(user))
-        resolve({ token: t, userInfo: user, permissions: permissions.value, menus: menus.value })
-      }, 800)
-    })
+  async function fetchUserInfo() {
+    if (!token.value) return
+    try {
+      const info = await getUserInfo()
+      menus.value = info.menus || []
+      permissions.value = info.permissions || []
+      addMenuRoutes(menus.value)
+      userInfo.value = { id: info.userId, username: info.username, nickname: info.nickname }
+      localStorage.setItem('admin_user', JSON.stringify(userInfo.value))
+    } catch (e) {
+      logout()
+    }
+  }
+
+  async function login(username, password) {
+    const res = await loginApi({ username, password })
+    token.value = res.token
+    userInfo.value = { id: res.userId, username: res.username, nickname: res.nickname }
+    localStorage.setItem('admin_token', res.token)
+    localStorage.setItem('admin_user', JSON.stringify(userInfo.value))
+
+    const info = await getUserInfo()
+    menus.value = info.menus || []
+    permissions.value = info.permissions || []
+    addMenuRoutes(menus.value)
+    userInfo.value = { id: info.userId, username: info.username, nickname: info.nickname }
+    localStorage.setItem('admin_user', JSON.stringify(userInfo.value))
+
+    return { token: token.value, userInfo: userInfo.value, permissions: permissions.value, menus: menus.value }
+  }
+
+  function hasPermission(code) {
+    return permissions.value.includes(code)
   }
 
   function logout() {
@@ -42,5 +55,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('admin_user')
   }
 
-  return { token, userInfo, permissions, menus, isLoggedIn, login, logout }
+  return { token, userInfo, permissions, menus, isLoggedIn, hasPermission, login, fetchUserInfo, logout }
 })

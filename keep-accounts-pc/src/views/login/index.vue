@@ -6,10 +6,11 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const auth = useAuthStore()
 
-const username = ref('admin')
-const password = ref('123456')
+const username = ref('')
+const password = ref('')
 const showPwd = ref(false)
 const loading = ref(false)
+const errorMsg = ref('')
 const uFocus = ref(false)
 const pFocus = ref(false)
 
@@ -26,10 +27,14 @@ function fieldStyle(focused) {
 
 async function handleLogin() {
   if (!username.value || !password.value) return
+  errorMsg.value = ''
   loading.value = true
   try {
     await auth.login(username.value, password.value)
     router.push('/dashboard')
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || '登录失败，请重试'
+    errorMsg.value = msg
   } finally {
     loading.value = false
   }
@@ -101,6 +106,12 @@ async function handleLogin() {
               <el-icon v-else size="15"><View /></el-icon>
             </button>
           </div>
+        </div>
+
+        <!-- Error message -->
+        <div v-if="errorMsg" style="margin-bottom:16px;padding:10px 14px;background:#FFF1F2;border:1px solid #FECDD3;border-radius:8px;display:flex;align-items:center;gap:8px;">
+          <el-icon style="color:#F43F5E;font-size:14px;flex-shrink:0;"><WarningFilled /></el-icon>
+          <span style="color:#BE123C;font-size:13px;">{{ errorMsg }}</span>
         </div>
 
         <!-- Submit -->

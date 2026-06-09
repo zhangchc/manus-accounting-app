@@ -1,6 +1,19 @@
 <script setup>
-import { ref, reactive, computed } from 'vue'
-import { Search, Plus, Edit, Delete, Setting, RefreshRight, ArrowDown } from '@element-plus/icons-vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Search, Plus, Edit, Delete, Setting, RefreshRight, WarningFilled } from '@element-plus/icons-vue'
+import { getUserList, createUser, updateUser, deleteUser, getUserRoles, assignUserRoles } from '@/api/user'
+import { getRoleList } from '@/api/role'
+
+const roleColorMap = [
+  { color: '#667EEA', bg: '#EEF2FF' },
+  { color: '#11998E', bg: '#F0FDF4' },
+  { color: '#F7971E', bg: '#FFF7ED' },
+  { color: '#F953C6', bg: '#FDF2F9' },
+  { color: '#A855F7', bg: '#FDF4FF' },
+  { color: '#06B6D4', bg: '#ECFEFF' },
+  { color: '#F43F5E', bg: '#FFF1F2' },
+]
 
 const avatarGradients = [
   'linear-gradient(135deg,#667EEA,#764BA2)',
@@ -12,22 +25,8 @@ const avatarGradients = [
   'linear-gradient(135deg,#F43F5E,#FB923C)',
 ]
 
-const users = ref([
-  { id: 1, username: 'admin', nickname: '超级管理员', role: '超级管理员', roleColor: '#667EEA', roleBg: '#EEF2FF', status: true, lastLogin: '2026-06-08 10:23:15', createdAt: '2026-01-01 00:00:00' },
-  { id: 2, username: 'zhangsan', nickname: '张三', role: '运营管理员', roleColor: '#11998E', roleBg: '#F0FDF4', status: true, lastLogin: '2026-06-07 18:45:30', createdAt: '2026-02-15 09:30:00' },
-  { id: 3, username: 'lisi', nickname: '李四', role: '内容编辑', roleColor: '#F7971E', roleBg: '#FFF7ED', status: false, lastLogin: '2026-05-20 14:22:10', createdAt: '2026-03-01 10:00:00' },
-  { id: 4, username: 'wangwu', nickname: '王五', role: '运营管理员', roleColor: '#11998E', roleBg: '#F0FDF4', status: true, lastLogin: '2026-06-08 09:15:00', createdAt: '2026-03-10 14:30:00' },
-  { id: 5, username: 'zhaoliu', nickname: '赵六', role: '数据分析师', roleColor: '#A855F7', roleBg: '#FDF4FF', status: true, lastLogin: '2026-06-06 16:30:00', createdAt: '2026-04-05 11:00:00' },
-  { id: 6, username: 'sunqi', nickname: '孙七', role: '内容编辑', roleColor: '#F7971E', roleBg: '#FFF7ED', status: false, lastLogin: '2026-06-01 09:00:00', createdAt: '2026-04-20 08:00:00' },
-  { id: 7, username: 'zhouba', nickname: '周八', role: '运营管理员', roleColor: '#11998E', roleBg: '#F0FDF4', status: true, lastLogin: '2026-06-08 11:20:00', createdAt: '2026-05-01 09:00:00' },
-])
-
-const allRoles = [
-  { name: '超级管理员', desc: '拥有系统所有权限，谨慎分配' },
-  { name: '运营管理员', desc: '负责日常运营管理，应用管理权限' },
-  { name: '内容编辑', desc: '负责内容审核与分类管理' },
-  { name: '数据分析师', desc: '只读权限，用于数据查看与分析' },
-]
+const users = ref([])
+const allRoles = ref([])
 
 const searchUser = ref('')
 const searchStatus = ref('')
@@ -37,16 +36,18 @@ const pageSize = ref(10)
 const showModal = ref(false)
 const editUser = ref(null)
 const showRoleModal = ref(false)
-const selectedRoles = ref([])
+const currentRoleUser = ref(null)
+const selectedRoleIds = ref([])
 const formStatus = ref(true)
 const deleteId = ref(null)
+const saving = ref(false)
 const form = reactive({ username: '', nickname: '', password: '', email: '', phone: '' })
 
 const filtered = computed(() => {
   let list = users.value
   if (searchUser.value) {
-    const kw = searchUser.value
-    list = list.filter(u => u.username.includes(kw) || u.nickname.includes(kw))
+    const kw = searchUser.value.toLowerCase()
+    list = list.filter(u => u.username.toLowerCase().includes(kw) || u.nickname.toLowerCase().includes(kw))
   }
   if (searchStatus.value) {
     list = list.filter(u => u.status === (searchStatus.value === '1'))
@@ -59,6 +60,31 @@ const paged = computed(() => {
   return filtered.value.slice(start, start + pageSize.value)
 })
 
+function getRoleColor(idx) {
+  return roleColorMap[idx % roleColorMap.length]
+}
+
+async function loadUsers() {
+  try {
+    users.value = await getUserList()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '加载用户列表失败')
+  }
+}
+
+async function loadRoles() {
+  try {
+    allRoles.value = await getRoleList()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '加载角色列表失败')
+  }
+}
+
+onMounted(() => {
+  loadUsers()
+  loadRoles()
+})
+
 function openAdd() {
   editUser.value = null
   formStatus.value = true
@@ -69,40 +95,85 @@ function openAdd() {
 function openEdit(u) {
   editUser.value = u
   formStatus.value = u.status
-  Object.assign(form, { username: u.username, nickname: u.nickname, password: '', email: '', phone: '' })
+  Object.assign(form, { username: u.username, nickname: u.nickname, password: '', email: u.email || '', phone: u.phone || '' })
   showModal.value = true
 }
 
-function openRoles(u) {
-  selectedRoles.value = [u.role]
+async function openRoles(u) {
+  currentRoleUser.value = u
+  try {
+    const ids = await getUserRoles(u.id)
+    selectedRoleIds.value = [...ids]
+  } catch (e) {
+    selectedRoleIds.value = []
+  }
   showRoleModal.value = true
 }
 
 function handleDelete(id) { deleteId.value = id }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (deleteId.value !== null) {
-    users.value = users.value.filter(u => u.id !== deleteId.value)
+    try {
+      await deleteUser(deleteId.value)
+      ElMessage.success('删除成功')
+      deleteId.value = null
+      await loadUsers()
+    } catch (e) {
+      ElMessage.error(e?.response?.data?.message || '删除失败')
+    }
   }
-  deleteId.value = null
 }
 
-function toggleStatus(id) {
-  users.value = users.value.map(u => u.id === id ? { ...u, status: !u.status } : u)
+async function toggleStatus(u) {
+  try {
+    await updateUser({ id: u.id, username: u.username, nickname: u.nickname, email: u.email, phone: u.phone, status: !u.status })
+    u.status = !u.status
+    ElMessage.success(u.status ? '已启用' : '已禁用')
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '操作失败')
+  }
 }
 
-function handleSave() {
-  if (editUser.value) {
-    const idx = users.value.findIndex(u => u.id === editUser.value.id)
-    if (idx >= 0) Object.assign(users.value[idx], { ...form, status: formStatus.value })
-  } else {
-    users.value.push({
-      id: Date.now(), ...form, status: formStatus.value,
-      role: '内容编辑', roleColor: '#F7971E', roleBg: '#FFF7ED',
-      lastLogin: '-', createdAt: new Date().toLocaleString('zh-CN'),
-    })
+async function handleSave() {
+  saving.value = true
+  try {
+    const data = {
+      username: form.username,
+      nickname: form.nickname,
+      email: form.email,
+      phone: form.phone,
+      status: formStatus.value,
+    }
+    if (form.password) {
+      data.password = form.password
+    }
+    if (editUser.value) {
+      data.id = editUser.value.id
+      await updateUser(data)
+      ElMessage.success('编辑成功')
+    } else {
+      await createUser(data)
+      ElMessage.success('新增成功')
+    }
+    showModal.value = false
+    await loadUsers()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '保存失败')
+  } finally {
+    saving.value = false
   }
-  showModal.value = false
+}
+
+async function saveRoles() {
+  try {
+    await assignUserRoles(currentRoleUser.value.id, selectedRoleIds.value)
+    ElMessage.success('角色分配成功')
+    showRoleModal.value = false
+    await loadUsers()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '角色分配失败')
+  }
 }
 
 function handleSearch() { page.value = 1 }
@@ -148,7 +219,7 @@ const fieldStyle = {
             <el-icon style="font-size:13px;"><RefreshRight /></el-icon>重置
           </button>
         </div>
-        <button @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);flex-shrink:0;">
+        <button v-permission="'sys:admin:create'" @click="openAdd" style="height:36px;padding:0 18px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;font-weight:500;box-shadow:0 3px 10px rgba(102,126,234,0.35);flex-shrink:0;">
           <el-icon style="font-size:15px;"><Plus /></el-icon>新增用户
         </button>
       </div>
@@ -187,24 +258,34 @@ const fieldStyle = {
               </td>
               <td :style="{...tdStyle, color:'#475569'}">{{ u.nickname }}</td>
               <td :style="tdStyle">
-                <span :style="{fontSize:'12px',padding:'3px 10px',borderRadius:'20px',background:u.roleBg,color:u.roleColor,fontWeight:600}">
-                  {{ u.role }}
-                </span>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                  <template v-if="u.roleNames && u.roleNames.length">
+                    <span v-for="(rn, ri) in u.roleNames.slice(0, 2)" :key="ri"
+                      :style="{fontSize:'12px',padding:'3px 10px',borderRadius:'20px',background:getRoleColor(ri).bg,color:getRoleColor(ri).color,fontWeight:600}">
+                      {{ rn }}
+                    </span>
+                    <span v-if="u.roleNames.length > 2"
+                      style="fontSize:'11px',color:'#94A3B8',padding:'3px 6px'">
+                      +{{ u.roleNames.length - 2 }}
+                    </span>
+                  </template>
+                  <span v-else style="fontSize:'12px',color:'#CBD5E1'">未分配</span>
+                </div>
               </td>
               <td :style="tdStyle">
-                <el-switch :model-value="u.status" size="small" @change="toggleStatus(u.id)" />
+                <el-switch :model-value="u.status" size="small" @change="toggleStatus(u)" />
               </td>
-              <td :style="{...tdStyle, color:'#94A3B8', fontSize:'12px'}">{{ u.lastLogin }}</td>
-              <td :style="{...tdStyle, color:'#CBD5E1', fontSize:'12px'}">{{ u.createdAt }}</td>
+              <td :style="{...tdStyle, color:'#94A3B8', fontSize:'12px'}">{{ u.lastLogin || '-' }}</td>
+              <td :style="{...tdStyle, color:'#CBD5E1', fontSize:'12px'}">{{ u.createdAt || '-' }}</td>
               <td :style="tdStyle">
                 <div style="display:flex;gap:6px;">
-                  <button @click="openEdit(u)" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                  <button v-permission="'sys:admin:edit'" @click="openEdit(u)" style="height:28px;padding:0 10px;background:#EEF2FF;color:#667EEA;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
                     <el-icon style="font-size:11px;"><Edit /></el-icon>编辑
                   </button>
-                  <button @click="openRoles(u)" style="height:28px;padding:0 10px;background:#F0FDF4;color:#11998E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                  <button v-permission="'sys:admin:assign-role'" @click="openRoles(u)" style="height:28px;padding:0 10px;background:#F0FDF4;color:#11998E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
                     <el-icon style="font-size:11px;"><Setting /></el-icon>分配角色
                   </button>
-                  <button @click="handleDelete(u.id)" style="height:28px;padding:0 10px;background:#FFF1F2;color:#F43F5E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
+                  <button v-permission="'sys:admin:delete'" @click="handleDelete(u.id)" style="height:28px;padding:0 10px;background:#FFF1F2;color:#F43F5E;border:none;border-radius:7px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:3px;font-weight:500;">
                     <el-icon style="font-size:11px;"><Delete /></el-icon>删除
                   </button>
                 </div>
@@ -261,7 +342,7 @@ const fieldStyle = {
       <template #footer>
         <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid #F1F5F9;margin-top:8px;">
           <button @click="showModal = false" style="height:38px;padding:0 20px;border:1px solid #E2E8F0;border-radius:10px;background:#fff;color:#64748B;cursor:pointer;font-size:14px;">取消</button>
-          <button @click="handleSave" style="height:38px;padding:0 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(102,126,234,0.4);">确定</button>
+          <button @click="handleSave" :disabled="saving" style="height:38px;padding:0 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(102,126,234,0.4);">{{ saving ? '保存中...' : '确定' }}</button>
         </div>
       </template>
     </el-dialog>
@@ -269,26 +350,26 @@ const fieldStyle = {
     <!-- Role Assignment Modal -->
     <el-dialog v-model="showRoleModal" title="分配角色" width="480px" :close-on-click-modal="false">
       <div style="margin-bottom:4px;">
-        <label v-for="r in allRoles" :key="r.name"
+        <label v-for="r in allRoles" :key="r.id"
           style="display:flex;align-items:center;gap:12px;padding:12px 0;cursor:pointer;border-bottom:1px solid #F8FAFC;">
-          <input type="checkbox" :checked="selectedRoles.includes(r.name)"
-            @change="e => { if (e.target.checked) selectedRoles.push(r.name); else selectedRoles = selectedRoles.filter(x => x !== r.name) }"
+          <input type="checkbox" :checked="selectedRoleIds.includes(r.id)"
+            @change="e => { if (e.target.checked) selectedRoleIds.push(r.id); else selectedRoleIds = selectedRoleIds.filter(x => x !== r.id) }"
             style="accent-color:#667EEA;width:16px;height:16px;cursor:pointer;flex-shrink:0;" />
           <div>
             <div style="font-size:14px;color:#1E293B;font-weight:500;">{{ r.name }}</div>
-            <div style="font-size:12px;color:#94A3B8;margin-top:2px;">{{ r.desc }}</div>
+            <div style="font-size:12px;color:#94A3B8;margin-top:2px;">{{ r.desc || r.code }}</div>
           </div>
         </label>
       </div>
       <template #footer>
         <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid #F1F5F9;margin-top:8px;">
           <button @click="showRoleModal = false" style="height:38px;padding:0 20px;border:1px solid #E2E8F0;border-radius:10px;background:#fff;color:#64748B;cursor:pointer;font-size:14px;">取消</button>
-          <button @click="showRoleModal = false" style="height:38px;padding:0 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(102,126,234,0.4);">确定</button>
+          <button @click="saveRoles" style="height:38px;padding:0 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 12px rgba(102,126,234,0.4);">确定</button>
         </div>
       </template>
     </el-dialog>
 
-    <!-- Delete Confirm — exact match with original custom overlay -->
+    <!-- Delete Confirm -->
     <div v-if="deleteId !== null"
       style="position:fixed;inset:0;background:rgba(15,23,42,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;"
       @click="deleteId = null">
