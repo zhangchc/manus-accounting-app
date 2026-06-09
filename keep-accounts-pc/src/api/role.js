@@ -8,6 +8,10 @@ export function createRole(data) {
   return request.post('/manage/role', data)
 }
 
+export function updateRole(data) {
+  return request.put('/manage/role', data)
+}
+
 export function getRoleMenus(roleId) {
   return request.get(`/manage/role/${roleId}/menus`).then(r => r.data)
 }

@@ -8,6 +8,7 @@ Thumbs.db
 *.temp
 *.swp
 *~
+/.idea/
 
 # =====================
 # 后端 Backend (Java / Maven) — keep-accounts-server
@@ -23,6 +24,48 @@ Thumbs.db
 /keep-accounts-server/*.war
 /keep-accounts-server/*.ear
 /keep-accounts-server/*.class
+
+# =====================
+# 后端 Backend (Java / Maven) — keep-accounts-manage
+# =====================
+/keep-accounts-manage/target/
+/keep-accounts-manage/*.iml
+/keep-accounts-manage/.idea/
+/keep-accounts-manage/.settings/
+/keep-accounts-manage/.project
+/keep-accounts-manage/.classpath
+/keep-accounts-manage/out/
+/keep-accounts-manage/*.jar
+/keep-accounts-manage/*.war
+/keep-accounts-manage/*.ear
+/keep-accounts-manage/*.class
+/keep-accounts-manage/logs/
+/keep-accounts-manage/*.log
+/keep-accounts-manage/pom.xml.tag
+/keep-accounts-manage/pom.xml.releaseBackup
+/keep-accounts-manage/release.properties
+/keep-accounts-manage/dependency-reduced-pom.xml
+/keep-accounts-manage/.mvn/wrapper/maven-wrapper.jar
+
+# =====================
+# 前端 Frontend (Vue 3 / Vite) — keep-accounts-pc
+# =====================
+/keep-accounts-pc/node_modules/
+/keep-accounts-pc/dist/
+/keep-accounts-pc/.pnpm-store/
+/keep-accounts-pc/.env
+/keep-accounts-pc/.env.local
+/keep-accounts-pc/.env.*.local
+/keep-accounts-pc/.vscode/
+/keep-accounts-pc/.idea/
+/keep-accounts-pc/npm-debug.log*
+/keep-accounts-pc/yarn-debug.log*
+/keep-accounts-pc/yarn-error.log*
+/keep-accounts-pc/pnpm-debug.log*
+/keep-accounts-pc/.npm
+/keep-accounts-pc/.yarn-integrity
+/keep-accounts-pc/.pnpm-debug.log*
+/keep-accounts-pc/*.log
 
 # Maven
 /keep-accounts-server/pom.xml.tag
@@ -82,3 +125,4 @@ Thumbs.db
 *.zip
 *.tar.gz
 .attach
+.claude/settings.local.json

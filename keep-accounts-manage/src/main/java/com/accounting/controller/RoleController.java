@@ -2,6 +2,7 @@ package com.accounting.controller;
 
 import com.accounting.common.Result;
 import com.accounting.dto.RoleCreateDTO;
+import com.accounting.dto.RoleUpdateDTO;
 import com.accounting.service.RoleService;
 import com.accounting.vo.RoleVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,12 @@ public class RoleController {
     @PostMapping
     public Result<Void> create(@Valid @RequestBody RoleCreateDTO dto) {
         roleService.create(dto);
+        return Result.success();
+    }
+
+    @PutMapping
+    public Result<Void> update(@Valid @RequestBody RoleUpdateDTO dto) {
+        roleService.update(dto);
         return Result.success();
     }
 

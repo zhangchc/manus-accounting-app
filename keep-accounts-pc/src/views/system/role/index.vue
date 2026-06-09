@@ -2,7 +2,7 @@
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { Search, Plus, Edit, Delete, ArrowDown, ArrowRight, RefreshRight, Avatar, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getRoleList, createRole, getRoleMenus, assignRoleMenus } from '@/api/role'
+import { getRoleList, createRole, updateRole, getRoleMenus, assignRoleMenus } from '@/api/role'
 import { getMenuTree } from '@/api/menu'
 
 const roles = ref([])
@@ -140,9 +140,25 @@ function confirmDelete() {
 
 async function handleSave() {
   if (editRole.value) {
-    const idx = roles.value.findIndex(r => r.id === editRole.value.id)
-    if (idx >= 0) Object.assign(roles.value[idx], { ...form, status: formStatus.value })
-    showModal.value = false
+    try {
+      await updateRole({
+        id: editRole.value.id,
+        name: form.name,
+        code: form.code,
+        desc: form.desc,
+        sort: form.sort,
+        status: formStatus.value,
+      })
+      ElMessage.success('编辑角色成功')
+      showModal.value = false
+      // 如果编辑的角色正好是当前选中的，刷新权限面板
+      if (selectedRole.value?.id === editRole.value.id) {
+        selectedRole.value = null
+      }
+      await loadRoles()
+    } catch (e) {
+      ElMessage.error('编辑角色失败')
+    }
   } else {
     try {
       await createRole({

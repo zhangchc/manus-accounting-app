@@ -3,6 +3,7 @@ package com.accounting.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import com.accounting.common.BusinessException;
 import com.accounting.dto.RoleCreateDTO;
+import com.accounting.dto.RoleUpdateDTO;
 import com.accounting.entity.SysRole;
 import com.accounting.entity.SysRoleMenu;
 import com.accounting.mapper.SysRoleMapper;
@@ -60,6 +61,29 @@ public class RoleServiceImpl implements RoleService {
         role.setUpdatedUser(userId);
 
         roleMapper.insert(role);
+    }
+
+    @Override
+    public void update(RoleUpdateDTO dto) {
+        SysRole role = roleMapper.selectById(dto.getId());
+        if (role == null) {
+            throw new BusinessException("角色不存在");
+        }
+        Long count = roleMapper.selectCount(
+                new LambdaQueryWrapper<SysRole>()
+                        .eq(SysRole::getCode, dto.getCode())
+                        .ne(SysRole::getId, dto.getId())
+        );
+        if (count > 0) {
+            throw new BusinessException("角色编码已存在");
+        }
+
+        BeanUtil.copyProperties(dto, role, "createdUser", "createdAt");
+        role.setStatus(dto.getStatus() != null && dto.getStatus() ? 1 : 0);
+        Long userId = (Long) request.getAttribute("userId");
+        role.setUpdatedUser(userId);
+
+        roleMapper.updateById(role);
     }
 
     @Override
