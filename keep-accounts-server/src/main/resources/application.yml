@@ -13,6 +13,14 @@ spring:
     time-zone: GMT+8
     serialization:
       write-dates-as-timestamps: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+# 文件上传
+upload:
+  avatar-dir: upload/avatar
 
 # MyBatis-Plus 配置
 mybatis-plus:
@@ -57,6 +65,7 @@ logging:
     exclude-paths:
       - /api/user/login
       - /api/user/wxLogin
+      - /api/upload
       - /error
 
 # AI记账（阿里百炼）

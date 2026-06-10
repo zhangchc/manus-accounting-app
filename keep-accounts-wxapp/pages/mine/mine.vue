@@ -173,7 +173,7 @@
 </template>
 
 <script>
-import { getUserInfo, getYearSummary, updateUserInfo } from '../../api/index';
+import { getUserInfo, getYearSummary, updateUserInfo, uploadAvatar } from '../../api/index';
 import { formatMoney } from '../../utils/util';
 
 export default {
@@ -299,9 +299,13 @@ export default {
       }
       this.editSaving = true;
       try {
+        let avatarUrl = this.editForm.avatarUrl || this.userInfo.avatarUrl || '';
+        if (avatarUrl && avatarUrl.startsWith('wxfile://')) {
+          avatarUrl = await uploadAvatar(avatarUrl);
+        }
         await updateUserInfo({
           nickName,
-          avatarUrl: this.editForm.avatarUrl || this.userInfo.avatarUrl || ''
+          avatarUrl
         });
         await this.loadUserInfo();
         this.showEditPanel = false;
@@ -353,11 +357,24 @@ export default {
         this.loginNickFocus = true;
         return;
       }
-      getApp().relogin({
-        nickName: this.loginForm.nickName.trim(),
-        avatarUrl: this.loginForm.avatarUrl
-      }).then(() => {
+      const nickName = this.loginForm.nickName.trim();
+      const tempAvatarUrl = this.loginForm.avatarUrl;
+      // 先登录（不带头像，避免 wxfile:// 存入数据库）
+      getApp().relogin({ nickName }).then(async () => {
         this.isLoggedIn = true;
+        let avatarUrl = '';
+        try {
+          avatarUrl = await uploadAvatar(tempAvatarUrl);
+        } catch (e) {
+          console.error('头像上传失败', e);
+        }
+        if (avatarUrl) {
+          try {
+            await updateUserInfo({ nickName, avatarUrl });
+          } catch (e) {
+            console.error('更新头像失败', e);
+          }
+        }
         this.loginForm.nickName = '';
         this.loginForm.avatarUrl = '';
         this.loadUserInfo();

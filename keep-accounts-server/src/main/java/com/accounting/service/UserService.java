@@ -3,6 +3,7 @@ package com.accounting.service;
 import com.accounting.dto.LoginDTO;
 import com.accounting.entity.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -30,4 +31,9 @@ public interface UserService extends IService<User> {
      * 更新用户信息
      */
     void updateUserInfo(Long userId, User user);
+
+    /**
+     * 上传头像
+     */
+    String uploadAvatar(Long userId, MultipartFile file);
 }

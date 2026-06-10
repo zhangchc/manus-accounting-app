@@ -2,12 +2,45 @@
  * API 接口封装
  */
 import { get, post, put, del } from '../utils/request';
+import { currentEnv } from '../config/env';
 
 // ========== 用户相关 ==========
 export const wxLogin = (data) => post('/user/wxLogin', data);
 export const devLogin = (data) => post('/user/login', data);
 export const getUserInfo = () => get('/user/info');
 export const updateUserInfo = (data) => put('/user/info', data);
+
+/**
+ * 上传头像 - 将微信临时文件上传到服务器
+ * @param {string} tempFilePath - wxfile:// 临时路径
+ * @returns {Promise<string>} 服务器返回的头像 URL
+ */
+export const uploadAvatar = (tempFilePath) => {
+  return new Promise((resolve, reject) => {
+    const token = uni.getStorageSync('token');
+    uni.uploadFile({
+      url: currentEnv.baseUrl + '/user/avatar',
+      filePath: tempFilePath,
+      name: 'file',
+      header: {
+        'Authorization': token ? 'Bearer ' + token : ''
+      },
+      success: (res) => {
+        try {
+          const data = JSON.parse(res.data);
+          if (data.code === 200) {
+            resolve(currentEnv.baseUrl + data.data);
+          } else {
+            reject(new Error(data.message || '上传失败'));
+          }
+        } catch (e) {
+          reject(new Error('解析响应失败'));
+        }
+      },
+      fail: (err) => reject(err)
+    });
+  });
+};
 
 // ========== 账本相关 ==========
 export const getBookList = () => get('/book/list');

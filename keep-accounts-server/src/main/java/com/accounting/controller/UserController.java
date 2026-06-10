@@ -6,6 +6,7 @@ import com.accounting.entity.User;
 import com.accounting.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
@@ -57,5 +58,16 @@ public class UserController {
         Long userId = (Long) request.getAttribute("userId");
         userService.updateUserInfo(userId, user);
         return Result.success();
+    }
+
+    /**
+     * 上传头像
+     */
+    @PostMapping("/avatar")
+    public Result<String> uploadAvatar(HttpServletRequest request,
+                                       @RequestParam("file") MultipartFile file) {
+        Long userId = (Long) request.getAttribute("userId");
+        String avatarUrl = userService.uploadAvatar(userId, file);
+        return Result.success(avatarUrl);
     }
 }

@@ -1,5 +1,6 @@
 package com.accounting.service.impl;
 
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -20,7 +21,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +40,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Value("${wechat.secret}")
     private String secret;
+
+    @Value("${upload.avatar-dir:upload/avatar}")
+    private String avatarDir;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -130,5 +136,35 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         // 不允许修改openId
         user.setOpenId(null);
         this.updateById(user);
+    }
+
+    @Override
+    public String uploadAvatar(Long userId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("头像文件不能为空");
+        }
+
+        String ext = FileUtil.extName(file.getOriginalFilename());
+        if (!StrUtil.containsAny(ext.toLowerCase(), "jpg", "jpeg", "png", "gif", "webp")) {
+            throw new BusinessException("仅支持 jpg/png/gif/webp 格式");
+        }
+        if (file.getSize() > 2 * 1024 * 1024) {
+            throw new BusinessException("头像大小不能超过 2MB");
+        }
+
+        String filename = userId + "_" + System.currentTimeMillis() + "." + ext;
+        File dir = new File(avatarDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+
+        try {
+            File dest = new File(dir, filename);
+            file.transferTo(dest);
+            return "/upload/avatar/" + filename;
+        } catch (Exception e) {
+            log.error("头像上传失败", e);
+            throw new BusinessException("头像上传失败");
+        }
     }
 }

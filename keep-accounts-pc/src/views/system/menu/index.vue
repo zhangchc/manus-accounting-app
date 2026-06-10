@@ -334,10 +334,31 @@ const fieldStyle = {
         </div>
         <div style="flex:1;margin-bottom:14px;">
           <div style="font-size:13px;color:#475569;margin-bottom:6px;font-weight:500;">图标</div>
-          <select v-model="form.icon" :style="{...fieldStyle, cursor:'pointer'}">
-            <option value="">选择图标</option>
-            <option v-for="ic in iconOptions" :key="ic" :value="ic">{{ ic }}</option>
-          </select>
+          <el-select
+              v-model="form.icon"
+              placeholder="选择图标"
+              clearable
+              :style="{
+                width: '100%',
+                '--el-component-size': '36px',
+                '--el-border-radius-base': '10px',
+                '--el-fill-color-blank': '#F8FAFC',
+              }"
+              popper-class="icon-select-popper"
+            >
+              <el-option value="" label="无" />
+              <el-option
+                v-for="ic in iconOptions"
+                :key="ic"
+                :label="ic"
+                :value="ic"
+              >
+                <el-icon style="font-size:16px;vertical-align:middle;margin-right:6px;color:#667EEA;">
+                  <component :is="ic" />
+                </el-icon>
+                <span style="vertical-align:middle;">{{ ic }}</span>
+              </el-option>
+            </el-select>
         </div>
       </div>
       <!-- Component path (for menu only) -->
