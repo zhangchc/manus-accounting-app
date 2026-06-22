@@ -1,4 +1,14 @@
-# keep-accounts-server 技术规约
+# keep-accounts 技术规约
+
+## 项目映射（按需求类型选择，禁止全量分析）
+
+| 需求类型 | 后端服务 | 前端项目 |
+|----------|----------|----------|
+| 后台 PC 管理端 | `keep-accounts-manage` | `keep-accounts-pc` |
+| C 端小程序 | `keep-accounts-server` | `keep-accounts-wxapp` |
+
+- 接到需求时，先判断是 PC 后台还是 C 端小程序，然后**只读取对应两个项目**的代码。
+- **禁止一次性加载所有工程进行分析**，避免上下文浪费。
 
 ## 技术栈
 
@@ -14,7 +24,7 @@
 
 | 技术 | 版本 | 说明 |
 |------|------|------|
-| MyBatis-Plus | 3.5.5 | ORM，含逻辑删除、自动填充、分页。**禁止手写 SQL 拼接，统一使用 LambdaQueryWrapper / LambdaUpdateWrapper** |
+| MyBatis-Plus | 3.5.5 | ORM，含逻辑删除、自动填充、分页。**单表查询使用 LambdaQueryWrapper / LambdaUpdateWrapper，禁止字符串拼接 SQL；多表关联查询使用 XML 形式编写 SQL** |
 | MySQL | 8.0.33 | 关系数据库，**禁止使用存储过程、触发器、外键** |
 | Druid | 1.2.21 | 阿里巴巴连接池 |
 
@@ -60,7 +70,7 @@ com.accounting
 - 返回统一响应体 `Result<T>`，禁止直接返回 entity
 
 ### Service 规范
-- 接口-实现分离，事务注解 `@Transactional` 加在 impl 类的方法上
+- 接口-实现分离，`@Transactional` 加在 impl 类的方法上，仅在涉及多表写入或需要保证数据一致性的场景使用，单表操作或只读查询无需添加
 - 禁止在 service 中直接操作 HttpServletRequest/Response
 
 ### Mapper 规范
