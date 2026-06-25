@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.accounting.common.BusinessException;
 import com.accounting.dto.TradeRecordDTO;
 import com.accounting.dto.TradeStrategyDTO;
+import com.accounting.entity.StockPosition;
 import com.accounting.entity.TradeRecord;
 import com.accounting.entity.TradeStrategy;
 import com.accounting.mapper.TradeRecordMapper;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -34,10 +36,15 @@ public class TradeServiceImpl implements TradeService {
     @Autowired
     private StockPositionService stockPositionService;
 
+    @Autowired
+    private HttpServletRequest request;
+
     @Override
     public TradeStrategyVO getStrategy() {
+        Long userId = (Long) request.getAttribute("userId");
         LambdaQueryWrapper<TradeStrategy> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(TradeStrategy::getUpdatedAt).last("LIMIT 1");
+        wrapper.eq(TradeStrategy::getUserId, userId)
+                .orderByDesc(TradeStrategy::getUpdatedAt).last("LIMIT 1");
         TradeStrategy entity = strategyMapper.selectOne(wrapper);
 
         TradeStrategyVO vo = new TradeStrategyVO();
@@ -53,8 +60,10 @@ public class TradeServiceImpl implements TradeService {
     @Override
     @Transactional
     public TradeStrategyVO saveStrategy(TradeStrategyDTO dto) {
+        Long userId = (Long) request.getAttribute("userId");
         LambdaQueryWrapper<TradeStrategy> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(TradeStrategy::getUpdatedAt).last("LIMIT 1");
+        wrapper.eq(TradeStrategy::getUserId, userId)
+                .orderByDesc(TradeStrategy::getUpdatedAt).last("LIMIT 1");
         TradeStrategy existing = strategyMapper.selectOne(wrapper);
 
         TradeStrategy entity;
@@ -69,12 +78,12 @@ public class TradeServiceImpl implements TradeService {
             entity.setBuyCount(0);
         }
 
+        entity.setUserId(userId);
         entity.setBasePrice(dto.getBasePrice());
         entity.setSellShares(dto.getSellShares());
         entity.setBuyShares(dto.getBuyShares());
         entity.setMaxSellCount(dto.getMaxSellCount());
         entity.setMaxBuyCount(dto.getMaxBuyCount());
-        entity.setTotalHolding(dto.getTotalHolding());
         entity.setAlertWarningPrice(dto.getAlertWarningPrice());
         entity.setAlertCriticalPrice(dto.getAlertCriticalPrice());
 
@@ -120,14 +129,14 @@ public class TradeServiceImpl implements TradeService {
         vo.setNextSellNo(nextSellNo);
         vo.setNextBuyNo(unmatchedBuys + 1);
 
-        int currentHolding = strategy.getTotalHolding()
-                - (unmatchedSells * strategy.getSellShares())
-                + (unmatchedBuys * strategy.getBuyShares());
+        // 从持仓表读取当前实时持股数
+        StockPosition position = stockPositionService.getCurrentEntity();
+        int currentHolding = position != null ? position.getShares() : 0;
         int holdingAfterSell = currentHolding - strategy.getSellShares();
         vo.setCurrentHolding(currentHolding);
         vo.setHoldingAfterOp(holdingAfterSell);
 
-        int remainingBase = strategy.getTotalHolding() - maxSell * strategy.getSellShares();
+        int remainingBase = Math.max(0, currentHolding - maxSell * strategy.getSellShares());
         boolean isRising = "UP".equals(trend);
 
         if (nextSellNo <= maxSell) {
@@ -202,9 +211,9 @@ public class TradeServiceImpl implements TradeService {
         vo.setNextSellNo(unmatchedSells + 1);
         vo.setNextBuyNo(nextBuyNo);
 
-        int currentHolding = strategy.getTotalHolding()
-                - (unmatchedSells * strategy.getSellShares())
-                + (unmatchedBuys * strategy.getBuyShares());
+        // 从持仓表读取当前实时持股数
+        StockPosition position = stockPositionService.getCurrentEntity();
+        int currentHolding = position != null ? position.getShares() : 0;
         vo.setCurrentHolding(currentHolding);
         vo.setHoldingAfterOp(currentHolding + strategy.getBuyShares());
 
@@ -319,7 +328,14 @@ public class TradeServiceImpl implements TradeService {
             throw new BusinessException("第" + nextUnmatchedSell + "次卖出为" + ("BOUNDARY".equals(opLevel) ? "边界" : "超限") + "操作，必须填写操作理由");
         }
 
+        // 校验当前持仓是否足够
+        StockPosition position = stockPositionService.getCurrentEntity();
+        if (position == null || position.getShares() < dto.getShares()) {
+            throw new BusinessException("当前持仓不足，无法卖出 " + dto.getShares() + " 股");
+        }
+
         TradeRecord record = new TradeRecord();
+        record.setUserId((Long) request.getAttribute("userId"));
         record.setStrategyId(strategy.getId());
         record.setStockName(strategy.getStockName());
         record.setStockCode(strategy.getStockCode());
@@ -333,13 +349,14 @@ public class TradeServiceImpl implements TradeService {
         record.setReason(dto.getReason() != null ? dto.getReason() : "");
         record.setRemark(dto.getRemark() != null ? dto.getRemark() : "");
 
-        int currentHolding = strategy.getTotalHolding()
-                - (unmatchedSells * strategy.getSellShares())
-                + (unmatchedBuys * strategy.getBuyShares())
-                - dto.getShares();
+        // 计算卖出后持仓（position 已在上面校验环节读取）
+        int currentHolding = position.getShares() - dto.getShares();
         record.setCurrentHolding(currentHolding);
 
         recordMapper.insert(record);
+
+        // 摊薄法更新持仓：卖出回笼资金，减少持股
+        stockPositionService.updateAfterTrade("SELL", dto.getShares(), dto.getTradePrice(), dto.getTradePrice(), record.getId());
 
         strategy.setSellCount(strategy.getSellCount() + 1);
         strategyMapper.updateById(strategy);
@@ -373,20 +390,7 @@ public class TradeServiceImpl implements TradeService {
             throw new BusinessException("第" + nextUnmatchedBuy + "次买入为" + ("BOUNDARY".equals(opLevel) ? "边界" : "超限") + "操作，必须填写操作理由");
         }
 
-        // Find latest unmatched sell to pair
-        LambdaQueryWrapper<TradeRecord> sellWrapper = new LambdaQueryWrapper<>();
-        sellWrapper.eq(TradeRecord::getStrategyId, strategy.getId())
-                .eq(TradeRecord::getTradeType, "SELL")
-                .isNull(TradeRecord::getMatchedSellId)
-                .orderByDesc(TradeRecord::getCreatedAt)
-                .last("LIMIT 1");
-        // Find unpaired sells: sells that don't have a matching buy
-        // Actually, we need to find the latest sell that hasn't been matched
-        // matched_sell_id on sell records is set to null, it's the BUY record that has matched_sell_id
-        // Let me rethink: Buy record has matched_sell_id pointing to the sell it pairs with
-        // So to find unpaired sells: find sells where no buy record references their id
-
-        // Simpler approach: find the latest sell that doesn't have a buy referencing it
+        // 查找最新的未配对卖出记录，配对买入回补
         List<TradeRecord> allSells = recordMapper.selectList(
                 new LambdaQueryWrapper<TradeRecord>()
                         .eq(TradeRecord::getStrategyId, strategy.getId())
@@ -416,6 +420,7 @@ public class TradeServiceImpl implements TradeService {
         }
 
         TradeRecord record = new TradeRecord();
+        record.setUserId((Long) request.getAttribute("userId"));
         record.setStrategyId(strategy.getId());
         record.setStockName(strategy.getStockName());
         record.setStockCode(strategy.getStockCode());
@@ -436,13 +441,15 @@ public class TradeServiceImpl implements TradeService {
             record.setProfit(profit);
         }
 
-        int currentHolding = strategy.getTotalHolding()
-                - (unmatchedSells * strategy.getSellShares())
-                + (unmatchedBuys * strategy.getBuyShares())
-                + dto.getShares();
+        // 从持仓表读取当前实时持股数，计算买入后持仓
+        StockPosition position = stockPositionService.getCurrentEntity();
+        int currentHolding = position != null ? position.getShares() + dto.getShares() : 0;
         record.setCurrentHolding(currentHolding);
 
         recordMapper.insert(record);
+
+        // 摊薄法更新持仓：买入追加现金，增加持股
+        stockPositionService.updateAfterTrade("BUY", dto.getShares(), dto.getTradePrice(), dto.getTradePrice(), record.getId());
 
         strategy.setBuyCount(strategy.getBuyCount() + 1);
         strategyMapper.updateById(strategy);
@@ -566,6 +573,9 @@ public class TradeServiceImpl implements TradeService {
         }
         summary.setBuyLevels(buyLevels);
 
+        // 从持仓表读取当前实时持股数
+        StockPosition position = stockPositionService.getCurrentEntity();
+
         // Alerts
         List<Map<String, Object>> alerts = new ArrayList<>();
         if (summary.getCurrentPrice() != null && summary.getCurrentPrice().compareTo(BigDecimal.ZERO) > 0) {
@@ -588,7 +598,7 @@ public class TradeServiceImpl implements TradeService {
             if (unmatchedSellCount >= strategy.getMaxSellCount()) {
                 Map<String, Object> alert = new HashMap<>();
                 alert.put("level", "CRITICAL");
-                alert.put("msg", "净未配对卖出已达" + unmatchedSellCount + "次（" + (unmatchedSellCount * strategy.getSellShares()) + "股），剩余底仓" + (strategy.getTotalHolding() - unmatchedSellCount * strategy.getSellShares()) + "股，请重新评估");
+                alert.put("msg", "净未配对卖出已达" + unmatchedSellCount + "次（" + (unmatchedSellCount * strategy.getSellShares()) + "股），剩余底仓" + Math.max(0, position != null ? position.getShares() - unmatchedSellCount * strategy.getSellShares() : 0) + "股，请重新评估");
                 alerts.add(alert);
             }
             if (unmatchedBuyCount >= strategy.getMaxBuyCount()) {
@@ -647,7 +657,7 @@ public class TradeServiceImpl implements TradeService {
         summary.setTotalBuyCount(totalBuyCount);
         summary.setTotalBuyShares(totalBuyShares);
 
-        int holding = strategy.getTotalHolding() - totalSellShares + totalBuyShares;
+        int holding = position != null ? position.getShares() : 0;
         summary.setCurrentHolding(holding);
         if (summary.getCurrentPrice() != null && summary.getCurrentPrice().compareTo(BigDecimal.ZERO) > 0) {
             summary.setCurrentMarketValue(summary.getCurrentPrice().multiply(BigDecimal.valueOf(holding)));
@@ -730,8 +740,10 @@ public class TradeServiceImpl implements TradeService {
     }
 
     private TradeStrategy getStrategyEntity() {
+        Long userId = (Long) request.getAttribute("userId");
         LambdaQueryWrapper<TradeStrategy> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(TradeStrategy::getUpdatedAt).last("LIMIT 1");
+        wrapper.eq(TradeStrategy::getUserId, userId)
+                .orderByDesc(TradeStrategy::getUpdatedAt).last("LIMIT 1");
         return strategyMapper.selectOne(wrapper);
     }
 

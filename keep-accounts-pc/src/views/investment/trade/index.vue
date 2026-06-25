@@ -11,7 +11,7 @@ const summary = ref(null)
 const strategy = ref(null)
 const strategyForm = ref({
   basePrice: 64, sellShares: 600, buyShares: 600,
-  maxSellCount: 3, maxBuyCount: 3, totalHolding: 6800,
+  maxSellCount: 3, maxBuyCount: 3,
   alertWarningPrice: 25, alertCriticalPrice: 22,
 })
 const priceLoading = ref(false)
@@ -49,7 +49,6 @@ async function loadAll() {
         buyShares: s.strategy.buyShares,
         maxSellCount: s.strategy.maxSellCount,
         maxBuyCount: s.strategy.maxBuyCount,
-        totalHolding: s.strategy.totalHolding,
         alertWarningPrice: s.strategy.alertWarningPrice,
         alertCriticalPrice: s.strategy.alertCriticalPrice,
       }
@@ -141,7 +140,7 @@ async function openDialog(type) {
     dialogData.value = { type, ...precheck }
     dialogForm.value = {
       tradePrice: type === 'SELL'
-        ? (precheck.nextSellNo <= 3
+        ? (precheck.nextSellNo <= strategy.value.maxSellCount
           ? (strategy.value.basePrice * Math.pow(1.05, precheck.nextSellNo)).toFixed(2)
           : '')
         : '',
@@ -260,7 +259,6 @@ onMounted(() => loadAll())
           <div><div :style="labelS">买入股数</div><input v-model.number="strategyForm.buyShares" :style="inputS" type="number" /></div>
           <div><div :style="labelS">最多卖出次数</div><input v-model.number="strategyForm.maxSellCount" :style="inputS" type="number" /></div>
           <div><div :style="labelS">最多买入次数</div><input v-model.number="strategyForm.maxBuyCount" :style="inputS" type="number" /></div>
-          <div><div :style="labelS">总持仓</div><input v-model.number="strategyForm.totalHolding" :style="inputS" type="number" /></div>
           <div><div :style="labelS">预警价</div><input v-model.number="strategyForm.alertWarningPrice" :style="inputS" type="number" step="0.01" /></div>
           <div><div :style="labelS">紧急价</div><input v-model.number="strategyForm.alertCriticalPrice" :style="inputS" type="number" step="0.01" /></div>
         </div>
@@ -289,7 +287,7 @@ onMounted(() => loadAll())
               卖出
             </button>
           </div>
-          <div v-if="strategy" style="margin-bottom:8px;font-size:13px;color:#64748B;">
+          <div v-if="strategy && summary" style="margin-bottom:8px;font-size:13px;color:#64748B;">
             基准价: <b>{{ strategy.basePrice }}</b> &nbsp; 卖出进度: <b>{{ summary.unmatchedSellCount != null ? summary.unmatchedSellCount : strategy.sellCount }}/{{ strategy.maxSellCount }}</b>
           </div>
           <div v-if="summary && summary.sellLevels">
@@ -318,7 +316,7 @@ onMounted(() => loadAll())
               买入
             </button>
           </div>
-          <div v-if="strategy" style="margin-bottom:8px;font-size:13px;color:#64748B;">
+          <div v-if="strategy && summary" style="margin-bottom:8px;font-size:13px;color:#64748B;">
             买入进度: <b>{{ summary.unmatchedBuyCount != null ? summary.unmatchedBuyCount : strategy.buyCount }}/{{ strategy.maxBuyCount }}</b>
           </div>
           <div v-if="summary && summary.buyLevels && summary.buyLevels.length">

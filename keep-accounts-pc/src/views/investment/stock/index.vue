@@ -1,9 +1,16 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { RefreshRight } from '@element-plus/icons-vue'
-import { getPosition, savePosition, getStockPrice } from '@/api/stock'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import { getPosition, savePosition, getStockPrice, getCostHistory } from '@/api/stock'
+
+use([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
 
 const router = useRouter()
 
@@ -12,6 +19,7 @@ const error = ref('')
 const saving = ref(false)
 const priceLoading = ref(false)
 const stockPrice = ref(null)
+const costHistory = ref([])
 
 const form = ref({
   stockName: '常山药业',
@@ -84,6 +92,7 @@ async function handleSave() {
 async function handleRefreshPrice() {
   if (!form.value.stockCode) return
   priceLoading.value = true
+  loadCostHistory()
   try {
     const res = await getStockPrice(form.value.stockCode)
     if (res) {
@@ -108,8 +117,60 @@ async function handleRefreshPrice() {
   }
 }
 
+async function loadCostHistory() {
+  try {
+    const data = await getCostHistory()
+    costHistory.value = data || []
+  } catch (e) {
+    // 成本历史加载失败不影响主功能
+  }
+}
+
+const chartOption = computed(() => {
+  const list = costHistory.value
+  if (!list || list.length === 0) return {}
+  return {
+    grid: { top: 30, right: 30, bottom: 30, left: 60 },
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        const p = params[0]
+        const item = list[p.dataIndex]
+        return '时间：' + item.createdAt + '<br/>'
+          + '回本价：' + Number(item.costPrice).toFixed(4) + '<br/>'
+          + '持股数：' + item.shares + ' 股<br/>'
+          + '净投入：¥' + Number(item.netInvestment).toLocaleString('zh-CN', { minimumFractionDigits: 2 })
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: list.map(item => item.createdAt ? item.createdAt.substring(5, 16) : ''),
+      axisLabel: { fontSize: 11, color: '#94A3B8' },
+      axisLine: { lineStyle: { color: '#E2E8F0' } },
+    },
+    yAxis: {
+      type: 'value',
+      name: '回本价（元）',
+      nameTextStyle: { fontSize: 11, color: '#94A3B8' },
+      axisLabel: { fontSize: 11, color: '#94A3B8' },
+      splitLine: { lineStyle: { color: '#F1F5F9' } },
+    },
+    series: [{
+      data: list.map(item => item.costPrice),
+      type: 'line',
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 6,
+      lineStyle: { color: '#667EEA', width: 2 },
+      itemStyle: { color: '#667EEA' },
+      areaStyle: { color: 'rgba(102, 126, 234, 0.06)' },
+    }]
+  }
+})
+
 onMounted(() => {
   loadPosition()
+  loadCostHistory()
 })
 
 function fmt(n) {
@@ -286,6 +347,13 @@ function getPlSign() {
         <div style="font-size:40px;opacity:0.3;">📭</div>
         <div style="font-size:14px;color:#94A3B8;">暂无持仓数据，请先填写左侧持仓信息并保存</div>
       </div>
+    </div>
+
+    <!-- Cost Trend Chart -->
+    <div v-if="costHistory && costHistory.length > 0"
+      style="background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 16px rgba(0,0,0,0.06);margin-top:16px;">
+      <div style="font-size:15px;font-weight:600;color:#1E293B;margin-bottom:16px;">📉 成本趋势</div>
+      <v-chart :option="chartOption" style="height:320px;" autoresize />
     </div>
 
   </div>

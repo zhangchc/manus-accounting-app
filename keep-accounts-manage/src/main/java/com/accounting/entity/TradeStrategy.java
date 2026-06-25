@@ -13,6 +13,8 @@ public class TradeStrategy {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    private Long userId;
+
     private String stockName;
 
     private String stockCode;
@@ -26,8 +28,6 @@ public class TradeStrategy {
     private Integer maxSellCount;
 
     private Integer maxBuyCount;
-
-    private Integer totalHolding;
 
     private BigDecimal alertWarningPrice;
 

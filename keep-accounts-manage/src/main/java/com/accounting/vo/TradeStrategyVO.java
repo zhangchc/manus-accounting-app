@@ -23,8 +23,6 @@ public class TradeStrategyVO {
 
     private Integer maxBuyCount;
 
-    private Integer totalHolding;
-
     private BigDecimal alertWarningPrice;
 
     private BigDecimal alertCriticalPrice;

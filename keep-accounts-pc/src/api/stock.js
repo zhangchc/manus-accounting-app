@@ -45,3 +45,7 @@ export function getTradeSummary() {
 export function resetTrade() {
   return request.post('/manage/stock/trade/reset').then(r => r.data)
 }
+
+export function getCostHistory() {
+  return request.get('/manage/stock/cost-history').then(r => r.data)
+}

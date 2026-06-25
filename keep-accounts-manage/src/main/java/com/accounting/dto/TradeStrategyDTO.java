@@ -30,10 +30,6 @@ public class TradeStrategyDTO {
     @Min(value = 1, message = "最多买入次数必须大于0")
     private Integer maxBuyCount;
 
-    @NotNull(message = "总持仓不能为空")
-    @Min(value = 1, message = "总持仓必须大于0")
-    private Integer totalHolding;
-
     private BigDecimal alertWarningPrice;
 
     private BigDecimal alertCriticalPrice;

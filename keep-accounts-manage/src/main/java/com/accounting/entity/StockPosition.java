@@ -13,6 +13,8 @@ public class StockPosition {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
+    private Long userId;
+
     private String stockName;
 
     private String stockCode;
@@ -20,6 +22,9 @@ public class StockPosition {
     private BigDecimal costPrice;
 
     private Integer shares;
+
+    // 累计净投入 = 买入追加现金 - 卖出回收现金
+    private BigDecimal netInvestment;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
