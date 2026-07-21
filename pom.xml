@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.accounting</groupId>
-    <artifactId>accounting-parent</artifactId>
+    <artifactId>accounting</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
-    <name>accounting-parent</name>
+    <name>accounting</name>
     <description>记账应用父 POM，统一管理后端服务模块</description>
 
     <modules>

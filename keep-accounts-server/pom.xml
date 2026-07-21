@@ -6,13 +6,13 @@
 
     <parent>
         <groupId>com.accounting</groupId>
-        <artifactId>accounting-parent</artifactId>
+        <artifactId>accounting</artifactId>
         <version>1.0.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>accounting-backend</artifactId>
-    <name>accounting-backend</name>
+    <artifactId>accounting-server</artifactId>
+    <name>accounting-server</name>
     <description>微信记账小程序后端服务</description>
 
     <dependencies>
