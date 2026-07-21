@@ -41,7 +41,7 @@ public class JacksonConfig {
                     }
                 }
             });
-            builder.modules(module);
+            builder.modulesToInstall(module);
         };
     }
 }

@@ -124,6 +124,7 @@ public class TradeServiceImpl implements TradeService {
     private void buildSellPrecheck(TradePrecheckVO vo, TradeStrategy strategy, int[] counts, String trend) {
         int unmatchedSells = counts[0];
         int unmatchedBuys = counts[1];
+        int totalUnmatchedSellShares = counts[2];
         int nextSellNo = unmatchedSells + 1;
         int maxSell = strategy.getMaxSellCount();
         vo.setNextSellNo(nextSellNo);
@@ -136,7 +137,9 @@ public class TradeServiceImpl implements TradeService {
         vo.setCurrentHolding(currentHolding);
         vo.setHoldingAfterOp(holdingAfterSell);
 
-        int remainingBase = Math.max(0, currentHolding - maxSell * strategy.getSellShares());
+        // 剩余底仓 = 当前持仓 - 已卖出股数（来自实际记录） - 剩余计划卖出次数 × 每股卖出股数
+        int remainingSellSlots = Math.max(0, maxSell - unmatchedSells);
+        int remainingBase = Math.max(0, currentHolding - totalUnmatchedSellShares - remainingSellSlots * strategy.getSellShares());
         boolean isRising = "UP".equals(trend);
 
         if (nextSellNo <= maxSell) {
@@ -596,9 +599,13 @@ public class TradeServiceImpl implements TradeService {
             }
 
             if (unmatchedSellCount >= strategy.getMaxSellCount()) {
+                int totalUnmatchedSellShares = 0;
+                for (TradeRecord sell : unmatchedSells) {
+                    totalUnmatchedSellShares += sell.getShares();
+                }
                 Map<String, Object> alert = new HashMap<>();
                 alert.put("level", "CRITICAL");
-                alert.put("msg", "净未配对卖出已达" + unmatchedSellCount + "次（" + (unmatchedSellCount * strategy.getSellShares()) + "股），剩余底仓" + Math.max(0, position != null ? position.getShares() - unmatchedSellCount * strategy.getSellShares() : 0) + "股，请重新评估");
+                alert.put("msg", "净未配对卖出已达" + unmatchedSellCount + "次（" + totalUnmatchedSellShares + "股），剩余底仓" + Math.max(0, position != null ? position.getShares() - totalUnmatchedSellShares : 0) + "股，请重新评估");
                 alerts.add(alert);
             }
             if (unmatchedBuyCount >= strategy.getMaxBuyCount()) {
@@ -706,7 +713,7 @@ public class TradeServiceImpl implements TradeService {
     }
 
     /**
-     * 计算未配对数量 [未配对卖出数, 未配对买入数]
+     * 计算未配对数量 [未配对卖出数, 未配对买入数, 未配对卖出总股数]
      * 卖出被买入回补后互相抵消，只统计净未配对
      */
     private int[] getUnmatchedCounts(Long strategyId) {
@@ -730,13 +737,16 @@ public class TradeServiceImpl implements TradeService {
         }
 
         int matchedSellCount = 0;
+        int totalUnmatchedSellShares = 0;
         for (TradeRecord sell : sells) {
             if (matchedSellIds.contains(sell.getId())) {
                 matchedSellCount++;
+            } else {
+                totalUnmatchedSellShares += sell.getShares();
             }
         }
 
-        return new int[]{sells.size() - matchedSellCount, buys.size() - matchedBuyCount};
+        return new int[]{sells.size() - matchedSellCount, buys.size() - matchedBuyCount, totalUnmatchedSellShares};
     }
 
     private TradeStrategy getStrategyEntity() {
