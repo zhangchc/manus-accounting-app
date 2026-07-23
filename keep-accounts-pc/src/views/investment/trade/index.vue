@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, WarningFilled, TrendCharts, CaretTop, CaretBottom } from '@element-plus/icons-vue'
+import { Plus, WarningFilled, TrendCharts, CaretTop, CaretBottom, Bell } from '@element-plus/icons-vue'
 import { getPositionList } from '@/api/stock'
-import { getConfigList, getConfigByStockCode, saveConfig, getOperationList, saveRecord, getRecordList } from '@/api/trade'
+import { getConfigList, getConfigByStockCode, saveConfig, getOperationList, saveRecord, getRecordList, getNotifyConfig, saveNotifyConfig } from '@/api/trade'
 
 // 从真实接口获取持仓股票列表（用于下拉选择）
 const positionStocks = ref([])
@@ -53,6 +53,11 @@ const tDate = ref('')
 const showWarn = ref(false)
 const warnStock = ref(null)
 
+// Notification settings
+const showNotifyModal = ref(false)
+const nSendKey = ref('')
+const nEnable = ref(false)
+
 // 卖出 / 买入档位（从 operations 中过滤）
 const sellOps = computed(() => operations.value.filter(o => o.direction === 2))
 const buyOps = computed(() => operations.value.filter(o => o.direction === 1))
@@ -96,9 +101,10 @@ async function loadConfigs() {
     if (selected.value) {
       const match = tStocks.value.find(s => s.id === selected.value.id)
       if (match) {
-        selected.value = match
+        selectStock(match)
       } else {
         selected.value = tStocks.value.length > 0 ? tStocks.value[0] : null
+        if (selected.value) selectStock(selected.value)
       }
     } else if (tStocks.value.length > 0) {
       selectStock(tStocks.value[0])
@@ -270,6 +276,31 @@ async function loadPositionStocks() {
   }
 }
 
+async function openNotifySettings() {
+  try {
+    const config = await getNotifyConfig()
+    nSendKey.value = config.sendKey || ''
+    nEnable.value = config.enable === 'true'
+  } catch (e) {
+    nSendKey.value = ''
+    nEnable.value = false
+  }
+  showNotifyModal.value = true
+}
+
+async function saveNotifySettings() {
+  try {
+    await saveNotifyConfig({
+      sendKey: nSendKey.value,
+      enable: nEnable.value ? 'true' : 'false',
+    })
+    showNotifyModal.value = false
+    ElMessage.success('通知设置保存成功')
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '保存失败')
+  }
+}
+
 onMounted(async () => {
   await loadPositionStocks()
   await loadConfigs()
@@ -341,6 +372,14 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+
+        <!-- Notification settings button -->
+        <button @click="openNotifySettings"
+          style="height: 40px; padding: 0 16px; margin-top: 8px; background: #F8FAFC; color: #475569; border: 1px solid #E2E8F0; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; transition: all 0.15s; width: 100%;"
+          @mouseenter="e => { e.currentTarget.style.background = '#EEF2FF'; e.currentTarget.style.borderColor = '#667EEA'; e.currentTarget.style.color = '#667EEA'; }"
+          @mouseleave="e => { e.currentTarget.style.background = '#F8FAFC'; e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#475569'; }">
+          <el-icon style="font-size: 14px;"><Bell /></el-icon>通知设置
+        </button>
       </div>
 
       <!-- Right main -->
@@ -530,7 +569,7 @@ onMounted(async () => {
       </div>
 
       <template #footer>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #F1F5F9; margin-top: 8px;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
           <button @click="showStockModal = false" style="height: 38px; padding: 0 20px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #64748B; cursor: pointer; font-size: 14px;">取消</button>
           <button @click="saveStock" style="height: 38px; padding: 0 24px; border: none; border-radius: 10px; background: linear-gradient(135deg,#667EEA,#764BA2); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(102,126,234,0.4);">确定</button>
         </div>
@@ -569,7 +608,7 @@ onMounted(async () => {
           style="height: auto; resize: vertical; padding: 8px 12px; line-height: 1.6; border-radius: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; font-size: 13px; color: #334155; outline: none; width: 100%; box-sizing: border-box;" />
       </div>
       <template #footer>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #F1F5F9; margin-top: 8px;">
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
           <button @click="showTradeModal = false" style="height: 38px; padding: 0 20px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #64748B; cursor: pointer; font-size: 14px;">取消</button>
           <button @click="saveTrade" style="height: 38px; padding: 0 24px; border: none; border-radius: 10px; background: linear-gradient(135deg,#667EEA,#764BA2); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(102,126,234,0.4);">确定</button>
         </div>
@@ -599,6 +638,27 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <!-- Notification settings modal -->
+    <el-dialog v-model="showNotifyModal" title="通知设置" width="420px" :close-on-click-modal="false">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+        <div>
+          <div style="font-size: 14px; color: '#1E293B'; font-weight: 600;">通知开关</div>
+          <div style="font-size: 12px; color: '#94A3B8'; margin-top: 2px;">开启后，股价到达网格档位时将推送微信通知</div>
+        </div>
+        <el-switch v-model="nEnable" size="large" />
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">SendKey</div>
+        <input v-model="nSendKey" placeholder="请输入 Server酱 SendKey" :style="fieldStyle" />
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button @click="showNotifyModal = false" style="height: 38px; padding: 0 20px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #64748B; cursor: pointer; font-size: 14px;">取消</button>
+          <button @click="saveNotifySettings" style="height: 38px; padding: 0 24px; border: none; border-radius: 10px; background: linear-gradient(135deg,#667EEA,#764BA2); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(102,126,234,0.4);">保存</button>
+        </div>
+      </template>
+    </el-dialog>
 
   </div>
 </template>

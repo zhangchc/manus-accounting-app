@@ -29,3 +29,13 @@ export function saveRecord(data) {
 export function getRecordList(configId) {
   return request.get('/manage/stock/trade/record/list', { params: { configId } }).then(r => r.data)
 }
+
+/** 获取通知配置 */
+export function getNotifyConfig() {
+  return request.get('/manage/notify/config').then(r => r.data)
+}
+
+/** 保存通知配置 */
+export function saveNotifyConfig(data) {
+  return request.post('/manage/notify/config/save', data)
+}
