@@ -6,8 +6,8 @@ server:
 spring:
   datasource:
     druid:
-      url: jdbc:mysql://127.0.0.1:3306/accounting_app?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
-#      url: jdbc:mysql://8.153.192.39:3306/accounting_app?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+#      url: jdbc:mysql://127.0.0.1:3306/accounting_app?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
+      url: jdbc:mysql://8.153.192.39:3306/accounting_app?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
 
       username: root
       password: N2v:w6e.JQ_JpiA2

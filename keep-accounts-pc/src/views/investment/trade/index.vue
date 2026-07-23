@@ -1,516 +1,601 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { RefreshRight } from '@element-plus/icons-vue'
-import {
-  getTradeStrategy, saveTradeStrategy, tradePrecheck, tradeSell, tradeBuy,
-  getTradeRecords, getTradeSummary, resetTrade, getStockPrice
-} from '@/api/stock'
+import { Plus, WarningFilled, TrendCharts, CaretTop, CaretBottom } from '@element-plus/icons-vue'
+import { getPositionList } from '@/api/stock'
+import { getConfigList, getConfigByStockCode, saveConfig, getOperationList, saveRecord, getRecordList } from '@/api/trade'
 
-const summary = ref(null)
-const strategy = ref(null)
-const strategyForm = ref({
-  basePrice: 64, sellShares: 600, buyShares: 600,
-  maxSellCount: 3, maxBuyCount: 3,
-  alertWarningPrice: 25, alertCriticalPrice: 22,
+// 从真实接口获取持仓股票列表（用于下拉选择）
+const positionStocks = ref([])
+
+const avatarGradients = [
+  'linear-gradient(135deg,#667EEA,#764BA2)',
+  'linear-gradient(135deg,#11998E,#38EF7D)',
+  'linear-gradient(135deg,#F7971E,#FFD200)',
+  'linear-gradient(135deg,#F953C6,#B91D73)',
+  'linear-gradient(135deg,#A855F7,#6366F1)',
+  'linear-gradient(135deg,#06B6D4,#3B82F6)',
+  'linear-gradient(135deg,#F43F5E,#FB923C)',
+]
+
+const fieldStyle = {
+  height: '36px', padding: '0 12px', borderRadius: '10px', background: '#F8FAFC',
+  border: '1px solid #E2E8F0', fontSize: '13px', color: '#334155', outline: 'none',
+  width: '100%', boxSizing: 'border-box',
+}
+
+const tStocks = ref([])
+const trades = ref([])
+const operations = ref([])
+const selected = ref(null)
+
+// Stock config modal
+const showStockModal = ref(false)
+const fCode = ref('')
+const fName = ref('')
+const fBase = ref('')
+const fLevels = ref('5')
+const fUpPct = ref('5')
+const fDownPct = ref('5')
+const fFixed = ref('')
+const fActive = ref(true)
+
+// Trade modal
+const showTradeModal = ref(false)
+const tOperationId = ref(null)
+const tDir = ref(2)
+const tPrice = ref('')
+const tShares = ref('')
+const tReason = ref('')
+const tDate = ref('')
+
+// Sell limit warning
+const showWarn = ref(false)
+const warnStock = ref(null)
+
+// 卖出 / 买入档位（从 operations 中过滤）
+const sellOps = computed(() => operations.value.filter(o => o.direction === 2))
+const buyOps = computed(() => operations.value.filter(o => o.direction === 1))
+
+// 已触发的卖出次数
+const sellTriggeredCount = computed(() => sellOps.value.filter(o => o.triggered === 1).length)
+
+// 总做T盈亏
+const totalPnl = computed(() => tStocks.value.reduce((sum, s) => sum + (s.totalPnl || 0), 0))
+// 做T总次数（所有股票的买卖次数汇总）
+const totalTrades = computed(() => tStocks.value.reduce((sum, s) => sum + (s.sellCount || 0) + (s.buyCount || 0), 0))
+
+// 新增弹窗：网格预览
+const previewLevels = computed(() => {
+  if (fBase.value && Number(fBase.value) > 0 && Number(fLevels.value) > 0) {
+    return gridLevels(Number(fBase.value), Math.min(Number(fLevels.value), 8), Number(fUpPct.value) || 5, Number(fDownPct.value) || 5)
+  }
+  return null
 })
-const priceLoading = ref(false)
-const records = ref([])
-const recordsPage = ref(1)
-const recordsTotal = ref(0)
-const savingStrategy = ref(false)
-const submitting = ref(false)
 
-// Precheck dialog state
-const dialogVisible = ref(false)
-const dialogData = ref(null)   // { type: 'SELL'|'BUY', ...precheck }
-const dialogForm = ref({ tradePrice: null, shares: null, reason: '' })
-
-const cardStyle = { background:'#fff',borderRadius:'16px',padding:'24px',boxShadow:'0 2px 16px rgba(0,0,0,0.06)',marginBottom:'16px' }
-const labelS = { fontSize:'13px',color:'#94A3B8',marginBottom:'6px',fontWeight:'500' }
-const inputS = { height:'40px',padding:'0 12px',borderRadius:'10px',background:'#F8FAFC',border:'1px solid #E2E8F0',fontSize:'14px',color:'#334155',outline:'none',width:'100%',boxSizing:'border-box' }
-
-function fmt(n) {
-  if (n == null || isNaN(n)) return '-'
-  return Number(n).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})
+// 网格档位价格计算（纯前端预览用）
+function gridLevels(base, levels, upPct, downPct) {
+  const sell = []
+  const buy = []
+  let sellPrice = base
+  let buyPrice = base
+  for (let i = 0; i < levels; i++) {
+    sellPrice = +(sellPrice * (1 + upPct / 100)).toFixed(2)
+    buyPrice  = +(buyPrice  * (1 - downPct / 100)).toFixed(2)
+    sell.push(sellPrice)
+    buy.push(buyPrice)
+  }
+  return { sell, buy }
 }
 
-// Load all data
-async function loadAll() {
-  priceLoading.value = true
+// 加载T配置列表
+async function loadConfigs() {
   try {
-    const s = await getTradeSummary()
-    summary.value = s
-    if (s.strategy && s.strategy.id) {
-      strategy.value = s.strategy
-      strategyForm.value = {
-        basePrice: s.strategy.basePrice,
-        sellShares: s.strategy.sellShares,
-        buyShares: s.strategy.buyShares,
-        maxSellCount: s.strategy.maxSellCount,
-        maxBuyCount: s.strategy.maxBuyCount,
-        alertWarningPrice: s.strategy.alertWarningPrice,
-        alertCriticalPrice: s.strategy.alertCriticalPrice,
+    tStocks.value = await getConfigList()
+    // 刷新后重新关联 selected 到新数组中的对象
+    if (selected.value) {
+      const match = tStocks.value.find(s => s.id === selected.value.id)
+      if (match) {
+        selected.value = match
+      } else {
+        selected.value = tStocks.value.length > 0 ? tStocks.value[0] : null
       }
-    }
-    // Always fetch live price regardless of strategy
-    if (!summary.value.currentPrice) {
-      await refreshStockPrice()
+    } else if (tStocks.value.length > 0) {
+      selectStock(tStocks.value[0])
     }
   } catch (e) {
-    ElMessage.error('加载数据失败')
-  } finally {
-    priceLoading.value = false
+    ElMessage.error(e?.response?.data?.message || '加载T配置失败')
   }
-  loadRecords()
 }
 
-async function refreshStockPrice() {
-  if (!summary.value) summary.value = {}
+// 选中股票 → 加载其档位和交易记录
+async function selectStock(s) {
+  selected.value = s
+  // 先清空，避免加载失败时展示上一只股票的数据
+  operations.value = []
+  trades.value = []
   try {
-    const stockCode = (summary.value.strategy && summary.value.strategy.stockCode) || 'sz300255'
-    const res = await getStockPrice(stockCode)
-    if (res && res.price != null) {
-      summary.value.currentPrice = res.price
-      summary.value.changeAmount = res.change
-      summary.value.changePercent = res.changePercent
+    const [ops, records] = await Promise.all([
+      getOperationList(s.id),
+      getRecordList(s.id),
+    ])
+    operations.value = ops || []
+    trades.value = records || []
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '加载数据失败')
+  }
+}
+
+// 新增弹窗
+function openAddStock() {
+  fCode.value = ''; fName.value = ''; fBase.value = ''; fLevels.value = '5'
+  fUpPct.value = '5'; fDownPct.value = '5'; fFixed.value = ''; fActive.value = true
+  showStockModal.value = true
+}
+
+// 股票下拉选择变更 → 查询是否有已配置规则，自动回填
+async function onStockSelect() {
+  if (!fCode.value) {
+    fName.value = ''
+    fBase.value = ''; fLevels.value = '5'; fUpPct.value = '5'; fDownPct.value = '5'
+    fFixed.value = ''; fActive.value = true
+    return
+  }
+  // 填充股票名称
+  const s = positionStocks.value.find(p => p.stockCode === fCode.value)
+  if (s) fName.value = s.stockName
+
+  // 查询是否已有T配置，有则回填
+  try {
+    const config = await getConfigByStockCode(fCode.value)
+    if (config) {
+      fName.value = config.stockName
+      fBase.value = String(config.basePrice)
+      fLevels.value = String(config.levels)
+      fUpPct.value = String(config.upPct)
+      fDownPct.value = String(config.downPct)
+      fFixed.value = String(config.fixedShares)
+      fActive.value = config.active === 1
     }
   } catch (e) {
-    // ignore silently; handleRefreshPrice will show error
+    // 不存在则忽略，用户自行填写
   }
 }
 
-async function handleRefreshPrice() {
-  priceLoading.value = true
-  try {
-    await refreshStockPrice()
-    if (!summary.value || summary.value.currentPrice == null) {
-      ElMessage.error('获取行情失败')
-    }
-  } catch (e) {
-    ElMessage.error('获取行情失败')
-  } finally {
-    priceLoading.value = false
+async function saveStock() {
+  if (!fCode.value) {
+    ElMessage.warning('请选择股票')
+    return
   }
-}
-
-async function loadRecords() {
-  try {
-    const data = await getTradeRecords({ page: recordsPage.value, pageSize: 10 })
-    records.value = data.records || []
-    recordsTotal.value = data.total || 0
-  } catch (e) {
-    // ignore
+  if (!fBase.value) {
+    ElMessage.warning('请输入基准价')
+    return
   }
-}
-
-async function handleSaveStrategy() {
-  savingStrategy.value = true
-  try {
-    const data = await saveTradeStrategy(strategyForm.value)
-    strategy.value = data
-    ElMessage.success('策略保存成功')
-    loadAll()
-  } catch (e) {
-    ElMessage.error('保存失败')
-  } finally {
-    savingStrategy.value = false
-  }
-}
-
-async function handleResetCount() {
-  try {
-    await resetTrade()
-    ElMessage.success('计数已重置')
-    loadAll()
-  } catch (e) {
-    ElMessage.error('重置失败')
-  }
-}
-
-// Open operation dialog
-async function openDialog(type) {
-  if (!strategy.value || !strategy.value.id) {
-    ElMessage.warning('请先保存策略配置')
+  if (!fFixed.value) {
+    ElMessage.warning('请输入每档操作股数')
     return
   }
   try {
-    const currentPrice = summary.value && summary.value.currentPrice ? summary.value.currentPrice : null
-    const precheck = await tradePrecheck(type, currentPrice)
-    dialogData.value = { type, ...precheck }
-    dialogForm.value = {
-      tradePrice: type === 'SELL'
-        ? (precheck.nextSellNo <= strategy.value.maxSellCount
-          ? (strategy.value.basePrice * Math.pow(1.05, precheck.nextSellNo)).toFixed(2)
-          : '')
-        : '',
-      shares: type === 'SELL' ? strategy.value.sellShares : strategy.value.buyShares,
-      reason: '',
-    }
-    dialogVisible.value = true
+    await saveConfig({
+      stockCode: fCode.value,
+      stockName: fName.value,
+      basePrice: Number(fBase.value),
+      levels: Number(fLevels.value),
+      upPct: Number(fUpPct.value),
+      downPct: Number(fDownPct.value),
+      fixedShares: Number(fFixed.value),
+      active: fActive.value ? 1 : 0,
+    })
+    showStockModal.value = false
+    ElMessage.success('保存成功')
+    await loadConfigs()
   } catch (e) {
-    ElMessage.error('操作检查失败')
+    ElMessage.error(e?.response?.data?.message || '保存失败')
   }
 }
 
-async function confirmDialog() {
-  if (!dialogForm.value.tradePrice || dialogForm.value.tradePrice <= 0) {
+function openLevelTrade(direction, price, operationId) {
+  if (!selected.value) return
+  // 先预填表单字段（强制卖出时也需要这些默认值）
+  tDir.value = direction
+  tPrice.value = String(price)
+  tShares.value = String(selected.value.fixedShares)
+  tReason.value = ''
+  tDate.value = new Date().toISOString().slice(0, 16)
+  // 强制卖出时不关联档位
+  tOperationId.value = direction === 2 && sellTriggeredCount.value >= selected.value.levels ? null : operationId
+
+  if (direction === 2 && sellTriggeredCount.value >= selected.value.levels) {
+    warnStock.value = selected.value
+    showWarn.value = true
+    return
+  }
+  showTradeModal.value = true
+}
+
+async function saveTrade() {
+  if (!selected.value) return
+  if (!tPrice.value) {
     ElMessage.warning('请输入成交价')
     return
   }
-  if (dialogData.value.reasonRequired && !dialogForm.value.reason) {
-    ElMessage.warning('该操作为' + (dialogData.value.opLevel === 'BOUNDARY' ? '边界' : '超限') + '操作，必须填写理由')
+  if (!tShares.value) {
+    ElMessage.warning('请输入股数')
     return
   }
-  submitting.value = true
+  if (!tReason.value.trim()) {
+    ElMessage.warning('请输入买卖理由')
+    return
+  }
+  if (!tDate.value) {
+    ElMessage.warning('请选择交易时间')
+    return
+  }
   try {
-    const payload = {
-      tradePrice: Number(dialogForm.value.tradePrice),
-      shares: Number(dialogForm.value.shares),
-      reason: dialogForm.value.reason || '',
+    // 格式化交易时间
+    const timeStr = tDate.value.replace('T', ' ') + ':00'
+    await saveRecord({
+      configId: selected.value.id,
+      operationId: tOperationId.value,
+      direction: tDir.value,
+      shares: Number(tShares.value),
+      price: Number(tPrice.value),
+      reason: tReason.value,
+      tradeTime: timeStr,
+    })
+    showTradeModal.value = false
+    ElMessage.success('交易记录保存成功')
+    // 刷新配置列表（顶部统计数据和左侧股票列表的买卖次数、盈亏）
+    await loadConfigs()
+    // 刷新当前选中股票的档位和交易记录
+    if (selected.value) {
+      const [ops, records] = await Promise.all([
+        getOperationList(selected.value.id),
+        getRecordList(selected.value.id),
+      ])
+      operations.value = ops || []
+      trades.value = records || []
     }
-    if (dialogData.value.type === 'SELL') {
-      await tradeSell(payload)
-    } else {
-      await tradeBuy(payload)
-    }
-    dialogVisible.value = false
-    ElMessage.success(dialogData.value.type === 'SELL' ? '卖出记录成功' : '买入记录成功')
-    loadAll()
   } catch (e) {
-    ElMessage.error(e?.response?.data?.message || '操作失败')
-  } finally {
-    submitting.value = false
+    ElMessage.error(e?.response?.data?.message || '保存失败')
   }
 }
 
-function prevPage() { if (recordsPage.value > 1) { recordsPage.value--; loadRecords() } }
-function nextPage() {
-  const totalPages = Math.ceil(recordsTotal.value / 10)
-  if (recordsPage.value < totalPages) { recordsPage.value++; loadRecords() }
+async function loadPositionStocks() {
+  try {
+    const res = await getPositionList({ page: 1, pageSize: 200 })
+    positionStocks.value = res.records || []
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '加载持仓列表失败')
+  }
 }
 
-// Helpers
-function getAlertBg(level) {
-  if (level === 'CRITICAL') return '#FFF1F2'
-  if (level === 'WARNING') return '#FFF7ED'
-  return '#EFF6FF'
-}
-function getAlertBorder(level) {
-  if (level === 'CRITICAL') return '#F43F5E'
-  if (level === 'WARNING') return '#F7971E'
-  return '#3B82F6'
-}
-function getAlertIcon(level) {
-  if (level === 'CRITICAL') return '🔴'
-  if (level === 'WARNING') return '🟡'
-  return '🔵'
-}
-
-onMounted(() => loadAll())
+onMounted(async () => {
+  await loadPositionStocks()
+  await loadConfigs()
+})
 </script>
 
 <template>
-  <div style="padding:24px;background:#F0F2F8;min-height:100%;">
-    <!-- Alert zone -->
-    <div v-if="summary && summary.alerts && summary.alerts.length" style="margin-bottom:16px;">
-      <div v-for="(a, i) in summary.alerts" :key="i"
-        :style="{padding:'10px 16px',borderRadius:'10px',fontSize:'13px',fontWeight:500,
-          background:getAlertBg(a.level),color:a.level==='CRITICAL'?'#BE123C':a.level==='WARNING'?'#C2410C':'#1E40AF',
-          border:'1px solid '+getAlertBorder(a.level),marginBottom:'6px'}">
-        {{ getAlertIcon(a.level) }} {{ a.msg }}
+  <div style="padding: 24px; background: #F0F2F8; min-height: 100%; box-sizing: border-box;">
+
+    <!-- Top stats -->
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+      <div v-for="c in [
+        { label: '总做T盈亏', value: `${totalPnl >= 0 ? '+' : ''}¥${totalPnl.toFixed(2)}`, sub: totalPnl >= 0 ? '累计盈利' : '累计亏损', bg: totalPnl >= 0 ? 'linear-gradient(135deg,#F43F5E,#FB923C)' : 'linear-gradient(135deg,#11998E,#38EF7D)', color: totalPnl >= 0 ? '#F43F5E' : '#11998E' },
+        { label: '做T总次数', value: `${totalTrades} 次`, sub: '', bg: 'linear-gradient(135deg,#667EEA,#764BA2)', color: '#667EEA' },
+      ]" :key="c.label" style="background: #fff; border-radius: 16px; padding: 20px 22px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); display: flex; align-items: center; gap: 16px;">
+        <div :style="{ width: '46px', height: '46px', borderRadius: '14px', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }">
+          <el-icon style="font-size: 20px; color: #fff;"><TrendCharts /></el-icon>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: #94A3B8; margin-bottom: 4px;">{{ c.label }}</div>
+          <div style="font-size: 18px; font-weight: 700; color: #1E293B; line-height: 1.2;">{{ c.value }}</div>
+          <div v-if="c.sub" :style="{ fontSize: '11px', color: c.color, marginTop: '2px', fontWeight: 500 }">{{ c.sub }}</div>
+        </div>
       </div>
     </div>
 
-    <!-- Row 1: 实时行情 | 策略配置 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
 
-      <div :style="cardStyle">
-        <div style="font-size:15px;font-weight:600;color:#1E293B;margin-bottom:16px;">📊 实时行情</div>
-        <div v-if="summary && summary.currentPrice != null" style="display:flex;align-items:baseline;justify-content:space-between;">
+      <!-- Left sidebar: stock list -->
+      <div style="flex: 0 0 300px; min-width: 0; display: flex; flex-direction: column; gap: 14px;">
+        <div style="background: #fff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); overflow: hidden; flex: 1;">
+          <div style="padding: 14px 16px; border-bottom: 1px solid #F1F5F9; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 14px; font-weight: 600; color: #1E293B;">T管理股票</span>
+            <button @click="openAddStock" style="height: 28px; padding: 0 10px; background: linear-gradient(135deg,#667EEA,#764BA2); color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 4px; font-weight: 500; box-shadow: 0 2px 8px rgba(102,126,234,0.3);">
+              <el-icon style="font-size: 12px;"><Plus /></el-icon>新增
+            </button>
+          </div>
           <div>
-            <div :style="labelS">最新价</div>
-            <div style="font-size:32px;font-weight:700;color:#1E293B;">{{ summary.currentPrice }}</div>
-          </div>
-          <div style="text-align:right;">
-            <div :style="labelS">涨跌</div>
-            <div :style="{fontSize:'18px',fontWeight:600,color:Number(summary.changeAmount||0)>=0?'#F43F5E':'#11998E'}">
-              {{ Number(summary.changeAmount||0)>=0?'+':'' }}{{ summary.changeAmount != null ? summary.changeAmount : '-' }}
-            </div>
-            <div :style="{fontSize:'14px',color:parseFloat(summary.changePercent||0)>=0?'#F43F5E':'#11998E'}">
-              {{ parseFloat(summary.changePercent||0)>=0?'+':'' }}{{ summary.changePercent != null ? summary.changePercent : '-' }}%
-            </div>
-          </div>
-        </div>
-        <div v-else-if="summary" style="padding:16px 0;text-align:center;color:#94A3B8;font-size:13px;">
-          暂无行情数据，请点击下方按钮刷新
-        </div>
-        <button @click="handleRefreshPrice" :disabled="priceLoading"
-          style="margin-top:12px;height:34px;padding:0 14px;background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px;">
-          <el-icon style="font-size:12px;"><RefreshRight /></el-icon>{{ priceLoading?'获取中...':'刷新行情' }}
-        </button>
-      </div>
-
-      <div :style="cardStyle">
-        <div style="font-size:15px;font-weight:600;color:#1E293B;margin-bottom:16px;">⚙️ 策略配置</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div><div :style="labelS">基准价</div><input v-model.number="strategyForm.basePrice" :style="inputS" type="number" step="0.01" /></div>
-          <div><div :style="labelS">卖出股数</div><input v-model.number="strategyForm.sellShares" :style="inputS" type="number" /></div>
-          <div><div :style="labelS">买入股数</div><input v-model.number="strategyForm.buyShares" :style="inputS" type="number" /></div>
-          <div><div :style="labelS">最多卖出次数</div><input v-model.number="strategyForm.maxSellCount" :style="inputS" type="number" /></div>
-          <div><div :style="labelS">最多买入次数</div><input v-model.number="strategyForm.maxBuyCount" :style="inputS" type="number" /></div>
-          <div><div :style="labelS">预警价</div><input v-model.number="strategyForm.alertWarningPrice" :style="inputS" type="number" step="0.01" /></div>
-          <div><div :style="labelS">紧急价</div><input v-model.number="strategyForm.alertCriticalPrice" :style="inputS" type="number" step="0.01" /></div>
-        </div>
-        <div style="display:flex;gap:10px;margin-top:12px;">
-          <button @click="handleSaveStrategy" :disabled="savingStrategy"
-            :style="{flex:1,height:'38px',border:'none',borderRadius:'10px',cursor:'pointer',fontSize:'13px',fontWeight:600,color:'#fff',
-              background:'linear-gradient(135deg,#667EEA,#764BA2)',boxShadow:'0 4px 12px rgba(102,126,234,0.4)'}">
-            {{ savingStrategy ? '保存中...' : '保存策略' }}
-          </button>
-          <button @click="handleResetCount"
-            style="height:38px;padding:0 16px;background:#FFF1F2;color:#F43F5E;border:1px solid #FECDD3;border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;">
-            重置计数
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Row 2: 卖出阶梯 + 待回补 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-      <div>
-        <div :style="cardStyle">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <div style="font-size:15px;font-weight:600;color:#1E293B;">📈 卖出阶梯（卖三）</div>
-            <button @click="openDialog('SELL')"
-              style="height:34px;padding:0 18px;background:linear-gradient(135deg,#F43F5E,#E11D48);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(244,63,94,0.3);">
-              卖出
-            </button>
-          </div>
-          <div v-if="strategy && summary" style="margin-bottom:8px;font-size:13px;color:#64748B;">
-            基准价: <b>{{ strategy.basePrice }}</b> &nbsp; 卖出进度: <b>{{ summary.unmatchedSellCount != null ? summary.unmatchedSellCount : strategy.sellCount }}/{{ strategy.maxSellCount }}</b>
-          </div>
-          <div v-if="summary && summary.sellLevels">
-            <div v-for="lv in summary.sellLevels" :key="lv.level"
-              style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;border:1px solid #E2E8F0;">
-              <div>
-                <div style="font-size:12px;color:#94A3B8;">卖{{ lv.level === 1 ? '一' : lv.level === 2 ? '二' : '三' }}</div>
-                <div style="font-size:14px;font-weight:600;color:#1E293B;">{{ lv.price }}</div>
-              </div>
-              <div style="text-align:right;">
-                <div :style="{fontSize:'12px',color:lv.done?'#11998E':'#CBD5E1'}">
-                  {{ lv.done ? '✅已卖' : '⬜待触发' }}
+            <div v-for="s in tStocks" :key="s.id"
+              @click="selectStock(s)"
+              :style="{ padding: '12px 16px', cursor: 'pointer', borderBottom: '1px solid #F8FAFC', background: selected?.id === s.id ? 'linear-gradient(135deg,rgba(102,126,234,0.06),rgba(118,75,162,0.04))' : '#fff', transition: 'background 0.15s', position: 'relative' }"
+              @mouseenter="e => { if (selected?.id !== s.id) e.currentTarget.style.background = '#FAFBFF' }"
+              @mouseleave="e => { if (selected?.id !== s.id) e.currentTarget.style.background = '#fff' }"
+            >
+              <span v-if="selected?.id === s.id" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 24px; border-radius: 0 2px 2px 0; background: linear-gradient(180deg,#667EEA,#764BA2);" />
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div :style="{ width: '30px', height: '30px', borderRadius: '8px', background: avatarGradients[s.id % avatarGradients.length], display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, flexShrink: 0 }">
+                    {{ s.stockName[0] }}
+                  </div>
+                  <div>
+                    <div style="font-size: 13px; font-weight: 700; color: '#1E293B';">{{ s.stockName }}</div>
+                    <div style="font-size: 12px; color: '#94A3B8'; font-family: monospace;">{{ s.stockCode }}</div>
+                  </div>
                 </div>
-                <div style="font-size:11px;color:#94A3B8;">↓{{ lv.backBuyPrice }}</div>
+                <span v-if="s.sellCount >= s.levels" style="font-size: 12px; padding: 2px 6px; border-radius: 20px; background: '#FFF1F2'; color: '#F43F5E'; font-weight: 600; flex-shrink: 0;">⚠ 满档</span>
+              </div>
+              <div style="display: flex; gap: 5px; margin-bottom: 6px; flex-wrap: wrap;">
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 20px; background: '#EEF2FF'; color: '#667EEA'; font-weight: 500;">¥{{ s.basePrice }}</span>
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 20px; background: '#F8FAFC'; color: '#475569'; font-weight: 500;">{{ s.levels }}档</span>
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 20px; background: '#FFF1F2'; color: '#F43F5E'; font-weight: 500;">涨{{ s.upPct }}%</span>
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 20px; background: '#F0FDF4'; color: '#11998E'; font-weight: 500;">跌{{ s.downPct }}%</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 20px; background: '#FFF1F2'; color: '#F43F5E'; font-weight: 500;">卖{{ s.sellCount }}</span>
+                <span style="font-size: 12px; padding: 2px 8px; border-radius: 20px; background: '#F0FDF4'; color: '#11998E'; font-weight: 500;">买{{ s.buyCount }}</span>
+                <span style="margin-left: auto; font-size: 13px; font-weight: 700;" :style="{ color: (s.totalPnl || 0) >= 0 ? '#F43F5E' : '#11998E' }">{{ (s.totalPnl || 0) >= 0 ? '+' : '' }}¥{{ (s.totalPnl || 0).toFixed(2) }}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div :style="cardStyle">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div style="font-size:15px;font-weight:600;color:#1E293B;">📉 待回补（买三）</div>
-            <button @click="openDialog('BUY')"
-              style="height:34px;padding:0 18px;background:linear-gradient(135deg,#11998E,#0D9488);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;box-shadow:0 3px 10px rgba(17,153,142,0.3);">
-              买入
-            </button>
+      <!-- Right main -->
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px;">
+        <template v-if="!selected">
+          <div style="background: #fff; border-radius: 16px; padding: 80px 20px; text-align: center; box-shadow: 0 2px 16px rgba(0,0,0,0.06);">
+            <el-icon style="font-size: 40px; opacity: 0.2; margin: 0 auto 12px; display: block;"><TrendCharts /></el-icon>
+            <div style="font-size: 14px; color: '#94A3B8';">请选择左侧股票查看T记录</div>
           </div>
-          <div v-if="strategy && summary" style="margin-bottom:8px;font-size:13px;color:#64748B;">
-            买入进度: <b>{{ summary.unmatchedBuyCount != null ? summary.unmatchedBuyCount : strategy.buyCount }}/{{ strategy.maxBuyCount }}</b>
-          </div>
-          <div v-if="summary && summary.buyLevels && summary.buyLevels.length">
-            <div v-for="bl in summary.buyLevels" :key="bl.sellId"
-              style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#F8FAFC;border-radius:8px;margin-bottom:6px;border:1px solid #E2E8F0;">
-              <div>
-                <div style="font-size:12px;color:#94A3B8;">卖出价 #{{ bl.sellNo }}</div>
-                <div style="font-size:14px;font-weight:600;color:#1E293B;">{{ bl.sellPrice }}</div>
-              </div>
-              <div style="font-size:18px;color:#CBD5E1;">→</div>
-              <div style="text-align:right;">
-                <div style="font-size:12px;color:#94A3B8;">回补价</div>
-                <div style="font-size:14px;font-weight:600;color:#11998E;">{{ bl.buyPrice }}</div>
-              </div>
-            </div>
-          </div>
-          <div v-else style="text-align:center;padding:20px;color:#94A3B8;font-size:13px;">
-            暂无待回补的卖出记录
-          </div>
-      </div>
-    </div>
-
-    <!-- Records table -->
-    <div :style="cardStyle">
-      <div style="font-size:15px;font-weight:600;color:#1E293B;margin-bottom:16px;">📋 操作记录</div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;min-width:1050px;font-size:13px;">
-          <thead>
-            <tr style="background:#F8FAFC;">
-              <th style="padding:10px 12px;text-align:left;color:#94A3B8;font-weight:600;font-size:12px;">时间</th>
-              <th style="padding:10px 12px;text-align:center;color:#94A3B8;font-weight:600;font-size:12px;">类型</th>
-              <th style="padding:10px 12px;text-align:right;color:#94A3B8;font-weight:600;font-size:12px;">成交价</th>
-              <th style="padding:10px 12px;text-align:right;color:#94A3B8;font-weight:600;font-size:12px;">股数</th>
-              <th style="padding:10px 12px;text-align:right;color:#94A3B8;font-weight:600;font-size:12px;">获利</th>
-              <th style="padding:10px 12px;text-align:center;color:#94A3B8;font-weight:600;font-size:12px;">卖计</th>
-              <th style="padding:10px 12px;text-align:center;color:#94A3B8;font-weight:600;font-size:12px;">买计</th>
-              <th style="padding:10px 12px;text-align:right;color:#94A3B8;font-weight:600;font-size:12px;">持仓</th>
-              <th style="padding:10px 12px;text-align:left;color:#94A3B8;font-weight:600;font-size:12px;">场景</th>
-              <th style="padding:10px 12px;text-align:left;color:#94A3B8;font-weight:600;font-size:12px;">理由</th>
-              <th style="padding:10px 12px;text-align:center;color:#94A3B8;font-weight:600;font-size:12px;">级别</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in records" :key="r.id" style="border-bottom:1px solid #F8FAFC;">
-              <td style="padding:10px 12px;color:#94A3B8;font-size:12px;">{{ (r.createdAt||'').slice(0,16) }}</td>
-              <td style="padding:10px 12px;text-align:center;">
-                <span :style="{fontSize:'12px',padding:'2px 10px',borderRadius:'20px',fontWeight:500,
-                  background:r.tradeType==='SELL'?'#FFF1F2':'#F0FDF4',color:r.tradeType==='SELL'?'#F43F5E':'#11998E'}">
-                  {{ r.tradeType === 'SELL' ? '卖出' : '买入' }}
-                </span>
-              </td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;color:#1E293B;">{{ r.tradePrice }}</td>
-              <td style="padding:10px 12px;text-align:right;color:#334155;">{{ r.shares }}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;color:r.profit && Number(r.profit)>0?'#F43F5E':'#94A3B8';">
-                {{ r.profit != null ? (Number(r.profit)>=0?'+':'')+fmt(r.profit) : '-' }}
-              </td>
-              <td style="padding:10px 12px;text-align:center;color:#334155;">{{ r.sellNo || '-' }}</td>
-              <td style="padding:10px 12px;text-align:center;color:#334155;">{{ r.buyNo || '-' }}</td>
-              <td style="padding:10px 12px;text-align:right;font-weight:600;color:#1E293B;">{{ r.currentHolding || '-' }}</td>
-              <td style="padding:10px 12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#64748B;font-size:12px;" :title="r.scenario">{{ r.scenario || '-' }}</td>
-              <td style="padding:10px 12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#475569;" :title="r.reason">{{ r.reason || '-' }}</td>
-              <td style="padding:10px 12px;text-align:center;">
-                <span v-if="r.opLevel === 'NORMAL'" style="font-size:11px;color:#11998E;">正常</span>
-                <span v-else-if="r.opLevel === 'BOUNDARY'" style="font-size:11px;color:#F7971E;font-weight:600;">⚠边界</span>
-                <span v-else-if="r.opLevel === 'OVERLIMIT'" style="font-size:11px;color:#F43F5E;font-weight:600;">🔴超限</span>
-                <span v-else style="font-size:11px;color:#94A3B8;">-</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div v-if="records.length===0" style="text-align:center;padding:40px;color:#94A3B8;font-size:13px;">暂无操作记录</div>
-      <div v-else style="display:flex;justify-content:flex-end;padding:12px 0 0;align-items:center;gap:6px;">
-        <span style="font-size:12px;color:#94A3B8;">共 {{ recordsTotal }} 条</span>
-        <button @click="prevPage" :disabled="recordsPage<=1"
-          style="width:30px;height:30px;border:1px solid #E2E8F0;border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"
-          :style="{opacity:recordsPage<=1?0.4:1}">◀</button>
-        <span style="font-size:13px;color:#334155;">{{ recordsPage }} / {{ Math.max(1,Math.ceil(recordsTotal/10)) }}</span>
-        <button @click="nextPage" :disabled="recordsPage>=Math.ceil(recordsTotal/10)"
-          style="width:30px;height:30px;border:1px solid #E2E8F0;border-radius:6px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;"
-          :style="{opacity:recordsPage>=Math.ceil(recordsTotal/10)?0.4:1}">▶</button>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div :style="cardStyle" v-if="summary">
-      <div style="font-size:15px;font-weight:600;color:#1E293B;margin-bottom:16px;">💰 统计</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
-        <div style="padding:14px;background:#F8FAFC;border-radius:10px;text-align:center;">
-          <div style="font-size:12px;color:#94A3B8;">累计做T获利</div>
-          <div :style="{fontSize:'20px',fontWeight:700,color:Number(summary.totalProfit||0)>=0?'#F43F5E':'#11998E'}">
-            {{ Number(summary.totalProfit||0)>=0?'+':'' }}¥{{ fmt(summary.totalProfit) }}
-          </div>
-        </div>
-        <div style="padding:14px;background:#F8FAFC;border-radius:10px;text-align:center;">
-          <div style="font-size:12px;color:#94A3B8;">累计卖出</div>
-          <div style="font-size:20px;font-weight:700;color:#1E293B;">{{ summary.totalSellCount }} 次</div>
-          <div style="font-size:11px;color:#94A3B8;">{{ summary.totalSellShares }} 股</div>
-        </div>
-        <div style="padding:14px;background:#F8FAFC;border-radius:10px;text-align:center;">
-          <div style="font-size:12px;color:#94A3B8;">累计买入</div>
-          <div style="font-size:20px;font-weight:700;color:#1E293B;">{{ summary.totalBuyCount }} 次</div>
-          <div style="font-size:11px;color:#94A3B8;">{{ summary.totalBuyShares }} 股</div>
-        </div>
-        <div style="padding:14px;background:#F8FAFC;border-radius:10px;text-align:center;">
-          <div style="font-size:12px;color:#94A3B8;">当前持仓</div>
-          <div style="font-size:20px;font-weight:700;color:#1E293B;">{{ summary.currentHolding }} 股</div>
-          <div style="font-size:11px;color:#94A3B8;">市值 ¥{{ fmt(summary.currentMarketValue) }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Confirmation Dialog -->
-    <div v-if="dialogVisible" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;" @click="dialogVisible = false">
-      <div style="background:#fff;border-radius:16px;width:440px;max-width:90vw;box-shadow:0 16px 48px rgba(0,0,0,0.14);" @click.stop>
-        <!-- Dialog header -->
-        <div :style="{padding:'20px 24px',borderBottom:'1px solid #F1F5F9',
-          background:dialogData&&dialogData.opLevel==='OVERLIMIT'?'linear-gradient(135deg,#FFF1F2,#FFF5F6)':
-            dialogData&&dialogData.opLevel==='BOUNDARY'?'linear-gradient(135deg,#FFF7ED,#FFFBEB)':
-            'linear-gradient(135deg,#F0FDF4,#F5FDF8)'}">
-          <div :style="{fontSize:'16px',fontWeight:700,color:dialogData&&dialogData.opLevel==='OVERLIMIT'?'#BE123C':
-            dialogData&&dialogData.opLevel==='BOUNDARY'?'#C2410C':'#1E293B'}">
-            {{ dialogData && dialogData.opLevel === 'OVERLIMIT' ? '🔴 超限操作' :
-               dialogData && dialogData.opLevel === 'BOUNDARY' ? '⚠️ 边界操作' : '确认' + (dialogData&&dialogData.type==='SELL'?'卖出':'买入') }}
-          </div>
-        </div>
-        <div style="padding:20px 24px;">
-          <!-- Warning -->
-          <div v-if="dialogData && dialogData.warning"
-            :style="{padding:'12px',borderRadius:'8px',fontSize:'13px',lineHeight:'1.6',marginBottom:'12px',
-              background:dialogData.opLevel==='OVERLIMIT'?'#FFF1F2':dialogData.opLevel==='BOUNDARY'?'#FFF7ED':'#EFF6FF',
-              color:dialogData.opLevel==='OVERLIMIT'?'#BE123C':dialogData.opLevel==='BOUNDARY'?'#C2410C':'#1E40AF',
-              border:'1px solid '+(dialogData.opLevel==='OVERLIMIT'?'#FECDD3':dialogData.opLevel==='BOUNDARY'?'#FED7AA':'#BFDBFE')}">
-            {{ dialogData.warning }}
-          </div>
-
-          <!-- Scenario display -->
-          <div v-if="dialogData && dialogData.scenario"
-            :style="{padding:'8px 12px',borderRadius:'8px',fontSize:'12px',marginBottom:'12px',
-              background:'#F8FAFC',border:'1px solid #E2E8F0',color:'#64748B'}">
-            📍 操作场景：<b style="color:#334155;">{{ dialogData.scenario }}</b>
-          </div>
-
-          <!-- Suggested reasons -->
-          <div v-if="dialogData && dialogData.suggestedReasons && dialogData.suggestedReasons.length"
-            style="margin-bottom:12px;">
-            <div style="font-size:12px;color:#94A3B8;margin-bottom:6px;">💡 建议理由（点击快速填充）：</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;">
-              <span v-for="(sr, i) in dialogData.suggestedReasons" :key="i"
-                @click="dialogForm.reason = sr"
-                :style="{padding:'4px 10px',background:'#EFF6FF',color:'#3B82F6',border:'1px solid #BFDBFE',borderRadius:'16px',fontSize:'12px',cursor:'pointer',display:'inline-block',maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}">
-                {{ sr }}
+        </template>
+        <template v-if="selected">
+          <!-- Grid visualization -->
+          <div style="background: #fff; border-radius: 16px; padding: 18px 24px; box-shadow: 0 2px 16px rgba(0,0,0,0.06);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+              <el-icon style="font-size: 14px; color: #667EEA;"><TrendCharts /></el-icon>
+              <span style="font-size: 13px; font-weight: 600; color: '#1E293B';">{{ selected.stockName }} · 网格档位</span>
+              <span style="font-size: 12px; color: '#94A3B8'; font-weight: 500;">基准价</span>
+              <span style="font-size: 13px; padding: 2px 10px; border-radius: 8px; background: linear-gradient(135deg,#667EEA,#764BA2); color: #fff; font-weight: 700; font-family: monospace;">¥{{ selected.basePrice }}</span>
+              <span style="font-size: 12px; padding: 2px 10px; border-radius: 20px; background: '#F8FAFC'; color: '#475569'; font-weight: 500;">{{ selected.levels }} 档</span>
+              <span style="font-size: 12px; padding: 2px 10px; border-radius: 20px; background: '#FFF1F2'; color: '#F43F5E'; font-weight: 500;">每档涨 {{ selected.upPct }}%</span>
+              <span style="font-size: 12px; padding: 2px 10px; border-radius: 20px; background: '#F0FDF4'; color: '#11998E'; font-weight: 500;">每档跌 {{ selected.downPct }}%</span>
+              <span v-if="sellTriggeredCount >= selected.levels" style="font-size: 12px; padding: 2px 10px; border-radius: 20px; background: '#FFF1F2'; color: '#F43F5E'; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                <el-icon style="font-size: 11px;"><WarningFilled /></el-icon>卖出已满 {{ selected.levels }} 档
               </span>
             </div>
-          </div>
 
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-              <div><div :style="labelS">成交价</div><input v-model.number="dialogForm.tradePrice" :style="inputS" type="number" step="0.01" /></div>
-              <div><div :style="labelS">股数</div><input v-model.number="dialogForm.shares" :style="inputS" type="number" /></div>
-            </div>
-
-            <div v-if="dialogData">
-              <div :style="labelS">操作后持仓: {{ dialogData.holdingAfterOp }} 股</div>
-            </div>
-
-            <div>
-              <div :style="labelS">
-                操作理由
-                <span v-if="dialogData && dialogData.reasonRequired" style="color:#F43F5E;">（必填）</span>
-                <span v-else style="color:#94A3B8;">（选填，建议填写）</span>
+            <!-- Sell levels -->
+            <div style="margin-bottom: 8px;">
+              <div style="font-size: 12px; color: '#F43F5E'; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.04em;">▲ 卖出档位（每档在上一档基础上涨 {{ selected.upPct }}%）</div>
+              <div style="display: flex; gap: 6px;">
+                <div v-for="(op, i) in sellOps" :key="'s'+i"
+                  :style="{ flex: 1, padding: '10px 8px 8px', borderRadius: '10px', textAlign: 'center', background: op.triggered === 1 ? '#FEF2F2' : '#FFF8F8', border: `1.5px solid ${op.triggered === 1 ? '#F43F5E' : '#FFE4E4'}`, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }">
+                  <div v-if="(i + 1) === selected.levels && op.triggered === 0" style="position: absolute; top: -7px; left: 50%; transform: translateX(-50%); font-size: 10px; background: '#F43F5E'; color: '#fff'; padding: 1px 6px; border-radius: 10px; font-weight: 700; white-space: nowrap;">满档警告</div>
+                  <div style="font-size: 12px; color: '#F43F5E'; font-weight: 600; margin-bottom: 3px;">卖出 {{ i + 1 }}</div>
+                  <div style="font-size: 13px; font-weight: 700; font-family: monospace;" :style="{ color: op.triggered === 1 ? '#F43F5E' : '#94A3B8' }">¥{{ op.levelPrice }}</div>
+                  <div style="font-size: 11px; margin-top: 2px; margin-bottom: 6px;" :style="{ color: op.triggered === 1 ? '#F43F5E' : '#CBD5E1' }">
+                    {{ op.triggered === 1 ? '✓ 已触发' : `+${(Math.pow(1 + selected.upPct / 100, i + 1) * 100 - 100).toFixed(1)}%` }}
+                  </div>
+                  <div v-if="op.triggered === 1" style="font-size: 11px; padding: 3px 8px; border-radius: 20px; background: '#F43F5E'; color: '#fff'; font-weight: 700; letter-spacing: 0.02em;">已卖</div>
+                  <button v-else
+                    @click="openLevelTrade(2, op.levelPrice, op.id)"
+                    style="font-size: 12px; padding: 3px 10px; border-radius: 20px; background: transparent; border: 1.5px solid #F43F5E; color: #F43F5E; cursor: pointer; font-weight: 600; line-height: 1.4; transition: all 0.15s;"
+                    @mouseenter="e => { e.currentTarget.style.background = '#F43F5E'; e.currentTarget.style.color = '#fff' }"
+                    @mouseleave="e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#F43F5E' }"
+                  >卖出</button>
+                </div>
               </div>
-              <textarea v-model="dialogForm.reason"
-                :style="{...inputS,height:'60px',padding:'8px 12px',resize:'vertical'}"
-                :placeholder="dialogData && dialogData.reasonRequired
-                  ? '该操作为'+(dialogData.opLevel==='BOUNDARY'?'边界':'超限')+'操作，必须填写理由'
-                  : '建议填写操作理由，方便后续复盘'"></textarea>
+            </div>
+
+            <!-- Buy levels -->
+            <div>
+              <div style="font-size: 12px; color: '#11998E'; font-weight: 600; margin-bottom: 6px; letter-spacing: 0.04em;">▼ 买入档位（每档在上一档基础上跌 {{ selected.downPct }}%）</div>
+              <div style="display: flex; gap: 6px;">
+                <div v-for="(op, i) in buyOps" :key="'b'+i"
+                  :style="{ flex: 1, padding: '10px 8px 8px', borderRadius: '10px', textAlign: 'center', background: op.triggered === 1 ? '#F0FDF4' : '#F8FFFC', border: `1.5px solid ${op.triggered === 1 ? '#11998E' : '#BBF7D0'}`, display: 'flex', flexDirection: 'column', alignItems: 'center' }">
+                  <div style="font-size: 12px; color: '#11998E'; font-weight: 600; margin-bottom: 3px;">买入 {{ i + 1 }}</div>
+                  <div style="font-size: 13px; font-weight: 700; font-family: monospace;" :style="{ color: op.triggered === 1 ? '#11998E' : '#94A3B8' }">¥{{ op.levelPrice }}</div>
+                  <div style="font-size: 11px; margin-top: 2px; margin-bottom: 6px;" :style="{ color: op.triggered === 1 ? '#11998E' : '#CBD5E1' }">
+                    {{ op.triggered === 1 ? '✓ 已触发' : `-${(100 - Math.pow(1 - selected.downPct / 100, i + 1) * 100).toFixed(1)}%` }}
+                  </div>
+                  <div v-if="op.triggered === 1" style="font-size: 11px; padding: 3px 8px; border-radius: 20px; background: '#11998E'; color: '#fff'; font-weight: 700; letter-spacing: 0.02em;">已买</div>
+                  <button v-else-if="sellOps[i] && sellOps[i].triggered === 1"
+                    @click="openLevelTrade(1, op.levelPrice, op.id)"
+                    style="font-size: 12px; padding: 3px 10px; border-radius: 20px; background: transparent; border: 1.5px solid #11998E; color: #11998E; cursor: pointer; font-weight: 600; line-height: 1.4; transition: all 0.15s;"
+                    @mouseenter="e => { e.currentTarget.style.background = '#11998E'; e.currentTarget.style.color = '#fff' }"
+                    @mouseleave="e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#11998E' }"
+                  >买入</button>
+                  <div v-else style="font-size: 11px; padding: 3px 8px; border-radius: 20px; background: '#F1F5F9'; color: '#94A3B8'; font-weight: 500; line-height: 1.4;">待卖出</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-            <button @click="dialogVisible = false"
-              style="height:38px;padding:0 20px;background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:10px;cursor:pointer;font-size:13px;">取消</button>
-            <button @click="confirmDialog" :disabled="submitting"
-              :style="{height:'38px',padding:'0 24px',border:'none',borderRadius:'10px',cursor:'pointer',fontSize:'13px',fontWeight:600,color:'#fff',
-                background:dialogData&&dialogData.opLevel==='OVERLIMIT'?'linear-gradient(135deg,#F43F5E,#E11D48)':
-                  dialogData&&dialogData.type==='SELL'?'linear-gradient(135deg,#F43F5E,#E11D48)':
-                  'linear-gradient(135deg,#11998E,#0D9488)',
-                boxShadow:dialogData&&dialogData.opLevel==='OVERLIMIT'?'0 4px 12px rgba(244,63,94,0.4)':
-                  dialogData&&dialogData.type==='SELL'?'0 4px 12px rgba(244,63,94,0.3)':
-                  '0 4px 12px rgba(17,153,142,0.3)'}">
-              {{ submitting ? '提交中...' : dialogData && dialogData.opLevel === 'OVERLIMIT' ? '强制'+ (dialogData.type==='SELL'?'卖出':'买入') : '确认'+ (dialogData&&dialogData.type==='SELL'?'卖出':'买入') }}
-            </button>
+          <!-- Trade records table -->
+          <div style="background: #fff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); overflow: hidden;">
+            <div style="padding: 14px 20px; border-bottom: 1px solid #F1F5F9; display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 14px; font-weight: 600; color: '#1E293B';">{{ selected.stockName }} · 交易记录</span>
+            </div>
+            <div v-if="trades.length === 0" style="padding: 48px 20px; text-align: center; color: '#94A3B8'; font-size: 14px;">暂无交易记录</div>
+            <div v-else style="overflow-x: auto;">
+              <table style="width: 100%; border-collapse: collapse; min-width: 520px;">
+                <thead>
+                  <tr>
+                    <th v-for="h in ['方向', '成交价', '股数', '配对盈亏', '买卖理由', '时间']" :key="h"
+                      style="padding: 10px 20px; font-size: 12px; color: '#94A3B8'; font-weight: 600; text-align: left; white-space: nowrap; background: '#F8FAFC'; border-bottom: 1px solid #F1F5F9; letter-spacing: 0.03em;">{{ h }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="t in trades" :key="t.id"
+                    style="transition: background 0.15s;"
+                    @mouseenter="e => (e.currentTarget.style.background = '#FAFBFF')"
+                    @mouseleave="e => (e.currentTarget.style.background = '#fff')"
+                  >
+                    <td style="padding: 12px 20px; white-space: nowrap; border-bottom: 1px solid #F8FAFC;">
+                      <span :style="{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', padding: '3px 10px', borderRadius: '20px', background: t.direction === 2 ? '#FFF1F2' : '#F0FDF4', color: t.direction === 2 ? '#F43F5E' : '#11998E', fontWeight: 700 }">
+                        <el-icon style="font-size: 11px;"><CaretTop v-if="t.direction === 2" /><CaretBottom v-else /></el-icon>
+                        {{ t.direction === 2 ? '卖出' : '买入' }}
+                      </span>
+                    </td>
+                    <td :style="{ padding: '12px 20px', fontSize: '13px', fontWeight: 700, color: t.direction === 2 ? '#F43F5E' : '#11998E', whiteSpace: 'nowrap', borderBottom: '1px solid #F8FAFC', fontFamily: 'monospace' }">¥{{ t.price.toFixed(2) }}</td>
+                    <td :style="{ padding: '12px 20px', fontSize: '13px', color: '#475569', whiteSpace: 'nowrap', borderBottom: '1px solid #F8FAFC', fontWeight: 500 }">{{ t.shares }} 股</td>
+                    <td style="padding: 12px 20px; white-space: nowrap; border-bottom: 1px solid #F8FAFC;">
+                      <template v-if="t.pairProfit === null || t.pairProfit === undefined">
+                        <span style="font-size: 12px; color: '#CBD5E1'; font-style: italic;">待匹配</span>
+                      </template>
+                      <template v-else>
+                        <span :style="{ fontSize: '13px', fontWeight: 700, color: t.pairProfit >= 0 ? '#F43F5E' : '#11998E', fontFamily: 'monospace' }">
+                          {{ t.pairProfit >= 0 ? '+' : '' }}¥{{ t.pairProfit.toFixed(2) }}
+                        </span>
+                      </template>
+                    </td>
+                    <td :style="{ padding: '12px 20px', fontSize: '13px', color: '#475569', borderBottom: '1px solid #F8FAFC', maxWidth: '200px' }">
+                      <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" :title="t.reason">{{ t.reason }}</div>
+                    </td>
+                    <td :style="{ padding: '12px 20px', fontSize: '12px', color: '#94A3B8', whiteSpace: 'nowrap', borderBottom: '1px solid #F8FAFC' }">{{ t.tradeTime }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Stock config modal -->
+    <el-dialog v-model="showStockModal" title="新增T管理股票" width="580px" :close-on-click-modal="false">
+      <div style="display: flex; flex-wrap: wrap; gap: 0 16px;">
+        <div style="flex: 1 1 100%; min-width: 200px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">选择股票 <span style="color: #F43F5E;">*</span></div>
+          <select v-model="fCode" @change="onStockSelect"
+            :style="{...fieldStyle, cursor: 'pointer'}">
+            <option value="">请选择持仓股票</option>
+            <option v-for="s in positionStocks" :key="s.stockCode" :value="s.stockCode">{{ s.stockName }}（{{ s.stockCode }}）</option>
+          </select>
+        </div>
+        <div style="flex: 1 1 calc(50% - 8px); min-width: 200px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">基准价（元） <span style="color: #F43F5E;">*</span></div>
+          <input v-model="fBase" type="number" step="0.01" placeholder="网格基准价" :style="fieldStyle" />
+        </div>
+        <div style="flex: 1 1 calc(50% - 8px); min-width: 200px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">档位数 <span style="color: #F43F5E;">*</span></div>
+          <input v-model="fLevels" type="number" min="1" max="20" placeholder="如：5" :style="fieldStyle" />
+        </div>
+        <div style="flex: 1 1 calc(50% - 8px); min-width: 200px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">卖出每档涨幅 % <span style="color: #F43F5E;">*</span></div>
+          <input v-model="fUpPct" type="number" step="0.1" min="0.1" placeholder="如：5" :style="fieldStyle" />
+        </div>
+        <div style="flex: 1 1 calc(50% - 8px); min-width: 200px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">买入每档跌幅 % <span style="color: #F43F5E;">*</span></div>
+          <input v-model="fDownPct" type="number" step="0.1" min="0.1" placeholder="如：10" :style="fieldStyle" />
+        </div>
+        <div style="flex: 1 1 calc(50% - 8px); min-width: 200px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">每次固定股数 <span style="color: #F43F5E;">*</span></div>
+          <input v-model="fFixed" type="number" placeholder="每档买卖股数" :style="fieldStyle" />
+        </div>
+        <div style="flex: 1 1 calc(50% - 8px); min-width: 200px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">状态</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+            <el-switch v-model="fActive" size="small" />
+            <span :style="{ fontSize: '13px', color: fActive ? '#11998E' : '#94A3B8', fontWeight: 500 }">{{ fActive ? '启用' : '停用' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid preview -->
+      <div v-if="previewLevels" style="background: '#F8FAFC'; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px;">
+        <div style="font-size: 12px; color: '#94A3B8'; font-weight: 500; margin-bottom: 10px;">
+          网格价位预览（卖出每档涨 {{ fUpPct }}%，买入每档跌 {{ fDownPct }}%）
+        </div>
+        <div style="margin-bottom: 6px;">
+          <div style="font-size: 12px; color: '#F43F5E'; font-weight: 600; margin-bottom: 4px;">▲ 卖出档位</div>
+          <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <div v-for="(p, i) in previewLevels.sell" :key="'ps'+i" style="padding: 3px 10px; border-radius: 8px; background: '#FFF1F2'; font-size: 12px; color: '#F43F5E'; font-weight: 600; font-family: monospace;">
+              卖{{ i + 1 }} ¥{{ p }}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 12px; color: '#11998E'; font-weight: 600; margin-bottom: 4px;">▼ 买入档位</div>
+          <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <div v-for="(p, i) in previewLevels.buy" :key="'pb'+i" style="padding: 3px 10px; border-radius: 8px; background: '#F0FDF4'; font-size: 12px; color: '#11998E'; font-weight: 600; font-family: monospace;">
+              买{{ i + 1 }} ¥{{ p }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #F1F5F9; margin-top: 8px;">
+          <button @click="showStockModal = false" style="height: 38px; padding: 0 20px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #64748B; cursor: pointer; font-size: 14px;">取消</button>
+          <button @click="saveStock" style="height: 38px; padding: 0 24px; border: none; border-radius: 10px; background: linear-gradient(135deg,#667EEA,#764BA2); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(102,126,234,0.4);">确定</button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- Trade record modal -->
+    <el-dialog v-model="showTradeModal" title="记录交易" width="520px" :close-on-click-modal="false">
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">交易方向 <span style="color: #F43F5E;">*</span></div>
+        <div style="display: flex; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; height: 40px;">
+          <button v-for="d in [{ v: 2, label: '卖出' }, { v: 1, label: '买入' }]" :key="d.v" type="button" @click="tDir = d.v"
+            :style="{ flex: 1, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: tDir === d.v ? (d.v === 2 ? 'linear-gradient(135deg,#F43F5E,#E11D48)' : 'linear-gradient(135deg,#11998E,#38EF7D)') : '#F8FAFC', color: tDir === d.v ? '#fff' : '#64748B', cursor: 'pointer', fontSize: '14px', fontWeight: tDir === d.v ? 700 : 400, transition: 'all 0.15s' }">
+            <el-icon style="font-size: 14px;"><CaretTop v-if="d.v === 2" /><CaretBottom v-else /></el-icon>
+            {{ d.label }}
+          </button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 16px;">
+        <div style="flex: 1; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">成交价（元） <span style="color: #F43F5E;">*</span></div>
+          <input v-model="tPrice" type="number" step="0.01" placeholder="请输入成交价" :style="fieldStyle" />
+        </div>
+        <div style="flex: 1; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">股数 <span style="color: #F43F5E;">*</span></div>
+          <input v-model="tShares" type="number" placeholder="交易股数" :style="fieldStyle" />
+        </div>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">交易时间 <span style="color: #F43F5E;">*</span></div>
+        <input v-model="tDate" type="datetime-local" :style="fieldStyle" />
+      </div>
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 13px; color: '#475569'; margin-bottom: 6px; font-weight: 500;">买卖理由 <span style="color: #F43F5E;">*</span></div>
+        <textarea v-model="tReason" placeholder="请描述本次买卖理由，如：触及二档止盈位，市场情绪偏热，获利了结..." rows="3"
+          style="height: auto; resize: vertical; padding: 8px 12px; line-height: 1.6; border-radius: 10px; background: #F8FAFC; border: 1px solid #E2E8F0; font-size: 13px; color: #334155; outline: none; width: 100%; box-sizing: border-box;" />
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 16px; border-top: 1px solid #F1F5F9; margin-top: 8px;">
+          <button @click="showTradeModal = false" style="height: 38px; padding: 0 20px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #64748B; cursor: pointer; font-size: 14px;">取消</button>
+          <button @click="saveTrade" style="height: 38px; padding: 0 24px; border: none; border-radius: 10px; background: linear-gradient(135deg,#667EEA,#764BA2); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(102,126,234,0.4);">确定</button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- Sell limit warning -->
+    <div v-if="showWarn && warnStock"
+      style="position: fixed; inset: 0; background: rgba(15,23,42,0.55); display: flex; align-items: center; justify-content: center; z-index: 1000;"
+      @click="showWarn = false">
+      <div style="background: #fff; border-radius: 16px; width: 420px; max-width: 90vw; padding: 32px 28px; box-shadow: 0 16px 48px rgba(244,63,94,0.18); text-align: center;"
+        @click.stop>
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg,#F43F5E,#E11D48); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(244,63,94,0.35);">
+          <el-icon style="font-size: 32px; color: #fff;"><WarningFilled /></el-icon>
+        </div>
+        <div style="font-size: 20px; font-weight: 800; color: '#1E293B'; margin-bottom: 8px;">⚠ 卖出已达上限</div>
+        <div style="font-size: 14px; color: '#64748B'; line-height: 1.7; margin-bottom: 8px;">
+          <span style="font-weight: 600; color: '#F43F5E';">{{ warnStock.stockName }}（{{ warnStock.stockCode }}）</span>
+          已卖出 <span style="font-weight: 700; color: '#F43F5E';">{{ sellTriggeredCount }} 次</span>，已触达设定的 <span style="font-weight: 700; color: '#F43F5E';">{{ warnStock.levels }} 档</span>上限。
+        </div>
+        <div style="font-size: 13px; color: '#94A3B8'; line-height: 1.6; margin-bottom: 24px; background: '#FFF8F8'; border-radius: 10px; padding: 12px 16px;">
+          继续卖出将超出网格策略范围，仓位可能过轻。建议先调整基准价或档位配置，再进行操作。
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+          <button @click="showWarn = false" style="height: 40px; padding: 0 24px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff; color: #64748B; cursor: pointer; font-size: 14px; font-weight: 500;">取消操作</button>
+          <button @click="showWarn = false; showTradeModal = true" style="height: 40px; padding: 0 24px; border: none; border-radius: 10px; background: linear-gradient(135deg,#F43F5E,#E11D48); color: #fff; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(244,63,94,0.35);">强制继续卖出</button>
         </div>
       </div>
     </div>

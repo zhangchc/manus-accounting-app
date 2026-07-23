@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -12,27 +11,33 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 股票持仓实体
+ * 做T操作表（网格档位快照）
  */
 @Data
-@TableName("stock_position")
-public class StockPosition {
+@TableName("t_stock_operation")
+public class StockTradeOperation {
 
     /** 主键ID（雪花ID） */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 股票代码，如 600519 */
+    /** 关联规则表 t_stock_config.id */
+    private Long configId;
+
+    /** 股票代码（冗余，方便查询） */
     private String stockCode;
 
-    /** 股票名称 */
-    private String stockName;
+    /** 档位编号 1,2,3... */
+    private Integer levelNo;
 
-    /** 持仓股数 */
-    private Integer shares;
+    /** 买卖方向 1-买入 2-卖出 */
+    private Integer direction;
 
-    /** 成本价（元） */
-    private BigDecimal costPrice;
+    /** 档位价格（规则生成时计算） */
+    private BigDecimal levelPrice;
+
+    /** 是否已触发 0-未触发 1-已触发 */
+    private Integer triggered;
 
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
@@ -41,8 +46,4 @@ public class StockPosition {
     /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
-
-    /** 逻辑删除 0-未删除 1-已删除 */
-    @TableLogic
-    private Integer deleted;
 }

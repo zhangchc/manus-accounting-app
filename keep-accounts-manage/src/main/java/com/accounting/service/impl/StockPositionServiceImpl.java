@@ -1,291 +1,220 @@
 package com.accounting.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.http.HttpUtil;
-import com.accounting.dto.StockPositionDTO;
-import com.accounting.entity.CostHistory;
+import com.accounting.common.BusinessException;
+import com.accounting.dto.StockPositionAddDTO;
+import com.accounting.dto.StockPositionQueryDTO;
+import com.accounting.dto.StockPositionSaveDTO;
 import com.accounting.entity.StockPosition;
-import com.accounting.entity.TradeRecord;
-import com.accounting.mapper.CostHistoryMapper;
 import com.accounting.mapper.StockPositionMapper;
-import com.accounting.mapper.TradeRecordMapper;
 import com.accounting.service.StockPositionService;
-import com.accounting.vo.CostHistoryVO;
+import com.accounting.utils.StockPriceUtil;
+import com.accounting.utils.StockPriceUtil.StockQuote;
+import com.accounting.vo.StockPositionSummaryVO;
 import com.accounting.vo.StockPositionVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 股票持仓 Service 实现
+ */
+@Slf4j
 @Service
 public class StockPositionServiceImpl implements StockPositionService {
 
     @Autowired
     private StockPositionMapper stockPositionMapper;
 
-    @Autowired
-    private CostHistoryMapper costHistoryMapper;
-
-    @Autowired
-    private TradeRecordMapper tradeRecordMapper;
-
-    @Autowired
-    private HttpServletRequest request;
-
     @Override
-    public StockPositionVO getPosition() {
-        // 当前登录用户ID，用于查询该用户的持仓记录
-        Long userId = (Long) request.getAttribute("userId");
-        // 构建查询条件：按更新时间倒序取最新一条持仓
-        LambdaQueryWrapper<StockPosition> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StockPosition::getUserId, userId)
-                .orderByDesc(StockPosition::getUpdatedAt).last("LIMIT 1");
-        // 数据库中的持仓实体（用户最近一条持股记录）
-        StockPosition entity = stockPositionMapper.selectOne(wrapper);
-
-        // 返回前端的持仓视图对象，持仓不存在时返回空对象（全字段null）
-        StockPositionVO vo = new StockPositionVO();
-        if (entity == null) {
-            return vo;
+    public StockPositionSummaryVO getSummary() {
+        // 1. 查询所有持仓
+        List<StockPosition> positions = stockPositionMapper.selectList(null);
+        if (positions.isEmpty()) {
+            return zeroSummary();
         }
 
-        vo.setId(entity.getId());
-        vo.setStockName(entity.getStockName());
-        vo.setStockCode(entity.getStockCode());
-        vo.setCostPrice(entity.getCostPrice());
-        vo.setShares(entity.getShares());
-        vo.setNetInvestment(entity.getNetInvestment());
-        if (entity.getUpdatedAt() != null) {
-            vo.setUpdatedAt(entity.getUpdatedAt().toString().replace("T", " "));
-        }
+        // 2. 提取所有 stock_code，批量获取行情
+        List<String> codes = positions.stream()
+                .map(StockPosition::getStockCode)
+                .collect(Collectors.toList());
+        Map<String, StockQuote> quoteMap = StockPriceUtil.fetchBatch(codes);
 
-        // 持仓总成本 = 成本价 × 持股数（前端「持仓成本」卡片）
-        BigDecimal totalCost = entity.getCostPrice().multiply(BigDecimal.valueOf(entity.getShares()));
-        vo.setTotalCost(totalCost);
+        // 3. 逐条计算汇总指标
+        BigDecimal totalCost = BigDecimal.ZERO;
+        BigDecimal totalMarketValue = BigDecimal.ZERO;
+        BigDecimal totalDailyPnl = BigDecimal.ZERO;
 
-        try {
-            // 从腾讯股票API获取的实时行情数据（含最新价、涨跌额、涨跌幅、昨收等）
-            Map<String, Object> priceInfo = fetchStockPrice(entity.getStockCode());
-            // 股票最新成交价（前端「实时行情」最新价）
-            BigDecimal currentPrice = (BigDecimal) priceInfo.get("price");
-            // 前一日收盘价，用于计算当日涨跌
-            BigDecimal prevClose = (BigDecimal) priceInfo.get("prevClose");
-            vo.setCurrentPrice(currentPrice);
-            vo.setChange((BigDecimal) priceInfo.get("change"));
-            vo.setChangePercent((String) priceInfo.get("changePercent"));
+        for (StockPosition p : positions) {
+            // 每只股票的成本 = 成本价 × 股数
+            BigDecimal cost = p.getCostPrice().multiply(BigDecimal.valueOf(p.getShares()));
+            totalCost = totalCost.add(cost);
 
-            // 当前市值 = 最新价 × 持股数（前端「当前市值」卡片）
-            BigDecimal currentValue = currentPrice.multiply(BigDecimal.valueOf(entity.getShares()));
-            vo.setCurrentValue(currentValue);
+            // 每只股票的市值 = 现价 × 股数，现价来自行情接口
+            StockQuote quote = quoteMap.get(p.getStockCode());
+            if (quote != null) {
+                BigDecimal marketValue = quote.currentPrice.multiply(BigDecimal.valueOf(p.getShares()));
+                totalMarketValue = totalMarketValue.add(marketValue);
 
-            // 浮动盈亏 = (最新价 - 成本价) × 持股数（前端「浮动盈亏」卡片）
-            BigDecimal profitLoss = currentPrice.subtract(entity.getCostPrice())
-                    .multiply(BigDecimal.valueOf(entity.getShares()));
-            vo.setProfitLoss(profitLoss);
-
-            if (entity.getCostPrice().compareTo(BigDecimal.ZERO) > 0) {
-                // 浮动盈亏百分比 = (最新价 - 成本价) / 成本价 × 100%（前端「盈亏比例」卡片）
-                BigDecimal percent = currentPrice.subtract(entity.getCostPrice())
-                        .divide(entity.getCostPrice(), 4, RoundingMode.HALF_UP)
-                        .multiply(BigDecimal.valueOf(100));
-                vo.setProfitLossPercent(percent);
-            }
-
-            if (prevClose != null && prevClose.compareTo(BigDecimal.ZERO) > 0) {
-                // 当日盈亏 = 收盘市值 + 净现金流 - 开盘市值（含日内买卖操作影响）
-                int todaySellShares = 0;
-                int todayBuyShares = 0;
-                BigDecimal todaySellAmount = BigDecimal.ZERO;
-                BigDecimal todayBuyAmount = BigDecimal.ZERO;
-
-                // 查询当日该股票的交易记录
-                java.time.LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-                LambdaQueryWrapper<TradeRecord> tradeWrapper = new LambdaQueryWrapper<>();
-                tradeWrapper.eq(TradeRecord::getUserId, userId)
-                        .eq(TradeRecord::getStockCode, entity.getStockCode())
-                        .ge(TradeRecord::getCreatedAt, todayStart);
-                List<TradeRecord> todayTrades = tradeRecordMapper.selectList(tradeWrapper);
-
-                for (TradeRecord t : todayTrades) {
-                    BigDecimal tradeCash = t.getTradePrice().multiply(BigDecimal.valueOf(t.getShares()));
-                    if ("SELL".equals(t.getTradeType())) {
-                        todaySellShares += t.getShares();
-                        todaySellAmount = todaySellAmount.add(tradeCash);
-                    } else if ("BUY".equals(t.getTradeType())) {
-                        todayBuyShares += t.getShares();
-                        todayBuyAmount = todayBuyAmount.add(tradeCash);
-                    }
+                // 当日盈亏 = 涨跌额 × 股数
+                if (quote.change != null) {
+                    BigDecimal dailyPnl = quote.change.multiply(BigDecimal.valueOf(p.getShares()));
+                    totalDailyPnl = totalDailyPnl.add(dailyPnl);
                 }
-
-                // 起始股数 = 当前持股 - 今日买入 + 今日卖出
-                int startShares = entity.getShares() - todayBuyShares + todaySellShares;
-                BigDecimal startValue = prevClose.multiply(BigDecimal.valueOf(startShares));
-                BigDecimal netCashFlow = todaySellAmount.subtract(todayBuyAmount);
-                // 当日盈亏 = 当前市值 + 净现金流 - 开盘市值
-                BigDecimal dailyPl = currentValue.add(netCashFlow).subtract(startValue);
-                vo.setDailyProfitLoss(dailyPl);
             }
-        } catch (Exception e) {
-            // 获取股价失败时，不设置现价相关字段
         }
 
+        // 4. 汇总：总盈亏 = 总市值 − 总成本
+        BigDecimal totalProfit = totalMarketValue.subtract(totalCost);
+
+        // 收益率 = 总盈亏 ÷ 总成本 × 100%
+        BigDecimal totalProfitRate = BigDecimal.ZERO;
+        if (totalCost.compareTo(BigDecimal.ZERO) > 0) {
+            totalProfitRate = totalProfit.divide(totalCost, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
+        // 总仓位 = 总市值 ÷ 总成本 × 100%
+        BigDecimal positionRate = BigDecimal.ZERO;
+        if (totalCost.compareTo(BigDecimal.ZERO) > 0) {
+            positionRate = totalMarketValue.divide(totalCost, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
+        StockPositionSummaryVO vo = new StockPositionSummaryVO();
+        vo.setTotalCost(totalCost);
+        vo.setTotalMarketValue(totalMarketValue);
+        vo.setTotalDailyPnl(totalDailyPnl);
+        vo.setTotalProfit(totalProfit);
+        vo.setTotalProfitRate(totalProfitRate);
+        vo.setPositionRate(positionRate);
         return vo;
     }
 
     @Override
-    @Transactional
-    public StockPositionVO saveOrUpdate(StockPositionDTO dto) {
-        Long userId = (Long) request.getAttribute("userId");
+    @Transactional(rollbackFor = Exception.class)
+    public void add(StockPositionAddDTO dto) {
+        // stock_code 唯一性校验
         LambdaQueryWrapper<StockPosition> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StockPosition::getUserId, userId)
-                .orderByDesc(StockPosition::getUpdatedAt).last("LIMIT 1");
-        StockPosition existing = stockPositionMapper.selectOne(wrapper);
-
-        StockPosition entity;
-        if (existing != null) {
-            entity = existing;
-        } else {
-            entity = new StockPosition();
+        wrapper.eq(StockPosition::getStockCode, dto.getStockCode());
+        if (stockPositionMapper.selectCount(wrapper) > 0) {
+            throw new BusinessException("该股票已存在，请使用修改功能");
         }
 
-        entity.setUserId(userId);
-        entity.setStockName(dto.getStockName());
+        StockPosition entity = new StockPosition();
         entity.setStockCode(dto.getStockCode());
-        entity.setCostPrice(dto.getCostPrice());
+        entity.setStockName(dto.getStockName());
         entity.setShares(dto.getShares());
+        entity.setCostPrice(dto.getCostPrice());
+        stockPositionMapper.insert(entity);
+    }
 
-        if (existing != null) {
-            // 存量数据兼容：netInvestment 为 0 时从当前成本和股数初始化
-            if (entity.getNetInvestment() == null || entity.getNetInvestment().compareTo(BigDecimal.ZERO) <= 0) {
-                entity.setNetInvestment(entity.getCostPrice().multiply(BigDecimal.valueOf(entity.getShares())));
-            }
-            stockPositionMapper.updateById(entity);
-        } else {
-            // 新建时初始化累计净投入 = 成本价 × 持股数
-            entity.setNetInvestment(dto.getCostPrice().multiply(BigDecimal.valueOf(dto.getShares())));
-            stockPositionMapper.insert(entity);
+    @Override
+    public Page<StockPositionVO> list(StockPositionQueryDTO dto) {
+        // 模糊搜索条件
+        LambdaQueryWrapper<StockPosition> wrapper = new LambdaQueryWrapper<>();
+        if (StrUtil.isNotBlank(dto.getStockCode())) {
+            wrapper.like(StockPosition::getStockCode, dto.getStockCode());
+        }
+        if (StrUtil.isNotBlank(dto.getStockName())) {
+            wrapper.like(StockPosition::getStockName, dto.getStockName());
         }
 
-        return getPosition();
+        Page<StockPosition> page = new Page<>(dto.getPage(), dto.getPageSize());
+        Page<StockPosition> result = stockPositionMapper.selectPage(page, wrapper);
+
+        // 批量获取行情，填充实时价格
+        List<String> codes = result.getRecords().stream()
+                .map(StockPosition::getStockCode)
+                .collect(Collectors.toList());
+        Map<String, StockQuote> quoteMap = StockPriceUtil.fetchBatch(codes);
+
+        // 转为 VO，计算每只股票的市值、盈亏、盈亏比例
+        List<StockPositionVO> voList = new ArrayList<>();
+        for (StockPosition p : result.getRecords()) {
+            StockPositionVO vo = new StockPositionVO();
+            vo.setId(p.getId());
+            vo.setStockCode(p.getStockCode());
+            vo.setStockName(p.getStockName());
+            vo.setShares(p.getShares());
+            vo.setCostPrice(p.getCostPrice());
+
+            // 从行情接口获取现价
+            StockQuote quote = quoteMap.get(p.getStockCode());
+            if (quote != null) {
+                vo.setCurrentPrice(quote.currentPrice);
+
+                // 市值 = 现价 × 股数
+                BigDecimal marketValue = quote.currentPrice
+                        .multiply(BigDecimal.valueOf(p.getShares()));
+                vo.setMarketValue(marketValue);
+
+                // 盈亏 = (现价 − 成本价) × 股数
+                BigDecimal profit = quote.currentPrice.subtract(p.getCostPrice())
+                        .multiply(BigDecimal.valueOf(p.getShares()));
+                vo.setProfit(profit);
+
+                // 盈亏比例 = (现价 − 成本价) ÷ 成本价 × 100%
+                if (p.getCostPrice().compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal profitRate = quote.currentPrice.subtract(p.getCostPrice())
+                            .divide(p.getCostPrice(), 4, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(100))
+                            .setScale(2, RoundingMode.HALF_UP);
+                    vo.setProfitRate(profitRate);
+                }
+            }
+            voList.add(vo);
+        }
+
+        Page<StockPositionVO> voPage = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
+        voPage.setRecords(voList);
+        return voPage;
     }
 
     @Override
-    public StockPosition getCurrentEntity() {
-        Long userId = (Long) request.getAttribute("userId");
-        LambdaQueryWrapper<StockPosition> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StockPosition::getUserId, userId)
-                .orderByDesc(StockPosition::getUpdatedAt).last("LIMIT 1");
-        return stockPositionMapper.selectOne(wrapper);
-    }
-
-    @Override
-    @Transactional
-    public void updateAfterTrade(String tradeType, Integer tradeShares, BigDecimal tradePrice, BigDecimal currentPrice, Long tradeRecordId) {
-        // 获取当前用户最新持仓，执行摊薄法更新
-        StockPosition position = getCurrentEntity();
-        if (position == null) {
+    @Transactional(rollbackFor = Exception.class)
+    public void save(StockPositionSaveDTO dto) {
+        // deleted = 1：逻辑删除
+        if (Integer.valueOf(1).equals(dto.getDeleted())) {
+            int rows = stockPositionMapper.deleteById(dto.getId());
+            if (rows == 0) {
+                throw new BusinessException("持仓记录不存在");
+            }
             return;
         }
 
-        // 存量数据兼容：netInvestment 未初始化时，从当前成本价和股数推算
-        if (position.getNetInvestment() == null || position.getNetInvestment().compareTo(BigDecimal.ZERO) <= 0) {
-            position.setNetInvestment(position.getCostPrice().multiply(BigDecimal.valueOf(position.getShares())));
-        }
-
-        BigDecimal tradeCash = tradePrice.multiply(BigDecimal.valueOf(tradeShares));
-        if ("BUY".equals(tradeType)) {
-            // 买入：追加净投入，增加持股
-            position.setShares(position.getShares() + tradeShares);
-            position.setNetInvestment(position.getNetInvestment().add(tradeCash));
-        } else {
-            // 卖出：回收现金，减少持股
-            position.setShares(position.getShares() - tradeShares);
-            position.setNetInvestment(position.getNetInvestment().subtract(tradeCash));
-        }
-
-        // 摊薄法回本价 = 累计净投入 / 当前持股数
-        if (position.getShares() > 0) {
-            position.setCostPrice(position.getNetInvestment()
-                    .divide(BigDecimal.valueOf(position.getShares()), 4, RoundingMode.HALF_UP));
-        }
-        stockPositionMapper.updateById(position);
-
-        // 插入成本历史记录
-        CostHistory history = new CostHistory();
-        history.setUserId((Long) request.getAttribute("userId"));
-        history.setStockCode(position.getStockCode());
-        history.setStockName(position.getStockName());
-        history.setShares(position.getShares());
-        history.setCostPrice(position.getCostPrice());
-        history.setNetInvestment(position.getNetInvestment());
-        history.setCurrentPrice(currentPrice);
-        history.setTradeType(tradeType);
-        history.setTradeRecordId(tradeRecordId);
-        costHistoryMapper.insert(history);
+        // deleted = 0：修改字段
+        StockPosition entity = new StockPosition();
+        entity.setId(dto.getId());
+        entity.setStockName(dto.getStockName());
+        entity.setShares(dto.getShares());
+        entity.setCostPrice(dto.getCostPrice());
+        stockPositionMapper.updateById(entity);
     }
 
-    @Override
-    public List<CostHistoryVO> getCostHistory() {
-        Long userId = (Long) request.getAttribute("userId");
-        LambdaQueryWrapper<CostHistory> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(CostHistory::getUserId, userId)
-                .orderByAsc(CostHistory::getCreatedAt);
-        List<CostHistory> list = costHistoryMapper.selectList(wrapper);
-
-        return list.stream().map(entity -> {
-            CostHistoryVO vo = new CostHistoryVO();
-            BeanUtil.copyProperties(entity, vo);
-            if (entity.getCreatedAt() != null) {
-                vo.setCreatedAt(entity.getCreatedAt().toString().replace("T", " "));
-            }
-            return vo;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    public Map<String, Object> getStockPrice(String code) {
-        if (StrUtil.isBlank(code)) {
-            Map<String, Object> empty = new HashMap<>();
-            empty.put("price", BigDecimal.ZERO);
-            return empty;
-        }
-        return fetchStockPrice(code);
-    }
-
-    private Map<String, Object> fetchStockPrice(String code) {
-        String url = "https://qt.gtimg.cn/q=" + code;
-        String response = HttpUtil.createGet(url).charset("GBK").execute().body();
-
-        if (StrUtil.isBlank(response)) {
-            throw new RuntimeException("获取股票行情失败");
-        }
-
-        String[] parts = response.split("~");
-        if (parts.length < 33) {
-            throw new RuntimeException("解析股票行情数据失败");
-        }
-
-        BigDecimal currentPrice = new BigDecimal(parts[3]);
-        BigDecimal prevClose = new BigDecimal(parts[4]);
-        BigDecimal changeAmount = new BigDecimal(parts[31]);
-        String changePercentStr = parts[32];
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("name", parts[1]);
-        result.put("price", currentPrice);
-        result.put("prevClose", prevClose);
-        result.put("change", changeAmount);
-        result.put("changePercent", changePercentStr);
-        return result;
+    /**
+     * 无持仓时返回全零的汇总数据
+     */
+    private StockPositionSummaryVO zeroSummary() {
+        StockPositionSummaryVO vo = new StockPositionSummaryVO();
+        vo.setTotalCost(BigDecimal.ZERO);
+        vo.setTotalMarketValue(BigDecimal.ZERO);
+        vo.setTotalDailyPnl(BigDecimal.ZERO);
+        vo.setTotalProfit(BigDecimal.ZERO);
+        vo.setTotalProfitRate(BigDecimal.ZERO);
+        vo.setPositionRate(BigDecimal.ZERO);
+        return vo;
     }
 }

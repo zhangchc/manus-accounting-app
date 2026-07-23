@@ -12,27 +12,39 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 股票持仓实体
+ * 做T管理规则实体
  */
 @Data
-@TableName("stock_position")
-public class StockPosition {
+@TableName("t_stock_config")
+public class StockTradeConfig {
 
     /** 主键ID（雪花ID） */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
-    /** 股票代码，如 600519 */
+    /** 股票代码 */
     private String stockCode;
 
     /** 股票名称 */
     private String stockName;
 
-    /** 持仓股数 */
-    private Integer shares;
+    /** 基准价（网格中枢） */
+    private BigDecimal basePrice;
 
-    /** 成本价（元） */
-    private BigDecimal costPrice;
+    /** 档位数（买入/卖出各N档） */
+    private Integer levels;
+
+    /** 卖出每档涨幅 % */
+    private BigDecimal upPct;
+
+    /** 买入每档跌幅 % */
+    private BigDecimal downPct;
+
+    /** 每档操作固定股数 */
+    private Integer fixedShares;
+
+    /** 状态 0-停用 1-启用 */
+    private Integer active;
 
     /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)

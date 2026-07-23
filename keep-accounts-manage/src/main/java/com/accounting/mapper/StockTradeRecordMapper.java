@@ -1,12 +1,12 @@
 package com.accounting.mapper;
 
-import com.accounting.entity.StockPosition;
+import com.accounting.entity.StockTradeRecord;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 /**
- * 股票持仓 Mapper
+ * 做T流水表 Mapper
  */
 @Mapper
-public interface StockPositionMapper extends BaseMapper<StockPosition> {
+public interface StockTradeRecordMapper extends BaseMapper<StockTradeRecord> {
 }

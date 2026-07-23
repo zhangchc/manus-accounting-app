@@ -81,6 +81,12 @@ com.accounting
 - Controller 层入参/出参由 AOP 切面统一打印，禁止在 Controller 方法内手动 log
 - 日志使用 Lombok `@Slf4j`，禁止 `System.out.println`
 
+### 注释规范
+- **类**：必须添加 Javadoc 注释，说明类的职责和用途
+- **方法**：必须添加 Javadoc 注释，说明方法功能、参数含义和返回值
+- **关键变量**：涉及业务含义的字段或复杂计算中间变量，须加行内注释说明
+- **核心业务逻辑**：非显而易见的计算、条件分支、流程编排，须加行内注释解释 WHY（不是 WHAT）
+
 ## 禁止事项
 
 1. 禁止引入与已有工具库功能重复的依赖（Guava、Apache Commons 等，Hutool 已覆盖）
